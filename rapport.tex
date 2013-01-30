@@ -1,0 +1,513 @@
+%\documentclass[a4paper,11pt,final]{article}
+% Pour une impression recto verso, utilisez plutôt ce documentclass :
+\documentclass[a4paper,11pt,twoside,final]{article}
+
+\usepackage[english,francais]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[pdftex]{graphicx}
+\usepackage{setspace}
+\usepackage{hyperref}
+\usepackage[french]{varioref}
+\usepackage{changepage} %for changing margins in appendices
+\usepackage{gantt}
+
+\newcommand{\reporttitle}{Rapport de stage}     % Titre
+\newcommand{\reportauthor}{Théophile \textsc{Ranquet}} % Auteur
+\newcommand{\reportsubject}{Stage de fin de Tronc Commun} % Sujet
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
+\setlength{\parskip}{1ex} % Espace entre les paragraphes
+
+\hypersetup{pdftitle={\reporttitle},
+            pdfauthor={\reportauthor},
+            pdfsubject={\reportsubject},
+            pdfkeywords={rapport} {vos} {mots} {clés}
+}
+
+\begin{document}
+  \include{title}
+  \cleardoublepage % Dans le cas du recto verso, ajoute une page blanche si besoin
+  \tableofcontents % Table des matières
+  \sloppy          % Justification moins stricte : des mots ne dépasseront pas des paragraphes
+  \cleardoublepage
+
+  \section*{Introduction} % Pas de numérotation
+  \addcontentsline{toc}{section}{Introduction} % Ajout dans la table des matières
+
+  Le stage de 2ème année du cycle d'ingénieur de l'EPITA, aussi appelé stage
+  de fin de Tronc Commun, est une expérience critique dans le parcours de
+  chacun. On pourrait en dire autant de tout stage, mais celui-ci est le
+  dernier avant le stage de fin d'études, qui est un peu différent des autres
+  en cela qu'il constitue une sorte de « période d'essai » par les entreprises
+  et débouche dans 90\% des cas (chiffres officiels de l'école en 2010) sur une
+  embauche (CDI, etc.). Ce stage de fin de tronc commun est donc de fait la
+  dernière occasion de découvrir un potentiel métier avant la sortie de
+  l'école, et il n'est pas rare que les étudiants choisissent de passer ces
+  cinq mois dans un environnement qui n'est pas forcément celui auquel ils se
+  destinaient pour leur avenir proche à la fin de leurs études, dans le but de
+  s'assurer qu'ils ont fait le bon choix, ou éventuellement de voir si un coup
+  de cœur ne les ferait pas changer d'avis.
+
+  Ce stage se place avant les deux semestres de spécialisation des étudiants de
+  l'EPITA\@. En ce qui me concerne, j'envisageais avant ce stage de m'orienter
+  vers la majeure « Système, Réseau et Sécurité » (SRS). Du coup, il me fallait
+  trouver un stage qui me plaise, mais qui me donne une expérience que je
+  n'aurai pas forcément l'occasion de reproduire dans un an. Alliant mes
+  intérêts pour la programmation Unix en C et C++ d'un côté, et pour
+  la théorie des langages et la compilation de l'autre, c'est donc avec un
+  naturel relatif que m'est venu l'idée de ce stage.
+
+  Le sujet de ce stage est « contribution aux développements de GNU Bison et
+  Tiger », et le lieu est le Laboratoire de Recherche et de Développement de
+  l'EPITA (LRDE). C'est un cadre très différent de celui de mon précédent
+  stage, et j'espérai par cela pouvoir gagner en maturité quand à la question
+  de savoir quel type d'entreprise ou équipe je compte rejoindre à la fin de
+  ma scolarité.
+
+  Ce stage, en plus de m'avoir donné la chance de travailler avec excellent
+  mentor, m'a permis de travailler avec des technologies auxquelles je n'étais
+  pas forcément familier au premier abord, et de contribuer à un projet libre.
+  Cela peut paraître anodin, mais c'est en fait tout un savoir faire qu'il faut
+  acquérir. J'ai donc gagné avec ce stage un certain nombre de connaissances
+  techniques, mais aussi toute une méthodologie qui, pour être tout à fait
+  honnête, n'était pas forcément ce par quoi je brillais le plus. J'ai
+  également consolidé certaines de mes notions d'informatique fondamentale,
+  notamment dans ce qui a trait à l'analyse syntaxique (plus spécifiquement
+  l'analyse syntaxique LR avec anticipation) et aux automates associés.
+
+  /* FIXME: 2 more pages. *
+
+  \cleardoublepage
+  \section{Présentation du laboratoire}
+  \subsection{Présentation générale}
+
+  Réunissant docteurs et doctorants en informatique, mathématiques ou
+  traitement du signal, le LRDE, Laboratoire de Recherche et Développement de
+  l'EPITA, est au carrefour de la recherche, du développement et de
+  l'enseignement. Les thèmes de recherche sont le calcul scientifique générique
+  et performant (ou comment concilier généralité et vitesse) et les modèles
+  probabilistes (ou comment attaquer les problèmes tels que la reconnaissance
+  des formes, l'authentification de la voix, la conformité approchée etc.).
+
+  Les résultats sont ensuite présentés dans des conférences internationales ou
+  des revues scientifiques - plus de 100 communications en 12 ans.\footnote{%
+  http://www.epita.fr/recherche-laboratoire-recherche-developpement-epita.aspx}
+
+  \subsection{La majeure CSI}
+
+  La majeure Calcul Scientifique et Image (CSI) est orientée vers la recherche
+  académique et permet à des étudiants de s'immerger dans un laboratoire aux
+  côtés des enseignants chercheurs. Les thèmes de recherche vont du traitement
+  d'images à la manipulation d'automates en passant par le traitement de la
+  parole, le model-checking ou l'aide à la décision.
+
+  L'ingénieur CSI se destine dans une première phase à la préparation d'une
+  thèse, en France ou à l'étranger, et il rejoindra ensuite la communauté des
+  chercheurs dans un cadre académique ou au sein des structures de recherche de
+  grandes entreprises ou de start-up innovantes.\footnote{%
+  http://www.epita.fr/cursus-cycle-ingenieur-majeures.aspx}
+
+  \subsection{Les lieux}
+
+  \subsection{Les projets}
+
+  \cleardoublepage
+
+  \section{Le projet GNU Bison}
+
+  \subsection{Analyseurs syntaxiques}
+
+  \subsection{Présentation de bison}
+
+  \subsection{Age et volumétrie du projet}
+  %http://www.ohloh.net/p/bison/commits/summary
+  %http://www.ohloh.net/p/bison/analyses/latest/languages_summary has had 5,161
+  %commits made by 33 contributors representing 33,410 lines of code
+
+  %Mature, well-established codebase The first lines of source code were added to
+  %GNU Bison in 1987. Projects with recent activity, and a code base more than
+  %five years old are likely solving vital problems and delivering consistent
+  %value, and may be organized to reward sustained effort by an engaged team of
+  %contributors.
+
+  %Such a lengthy source control history in conjunction with recent activity may
+  %indicate that this code base and community are important enough to attract
+  %long-term commitment, and may also indicate a mature and relatively bug-free
+  %code base.
+
+  %Increasing year-over-year development activity Over the last twelve months, GNU
+  %Bison	 has seen a substantial increase in activity. This may be a sign that
+  %interest in this project is rising, and that the open source community has
+  %embraced this project.
+
+  %Large, active development team Over the past twelve months, 8 developers
+  %contributed to GNU Bison. This project has a relatively large team, in the top
+  %10% of all project teams on Ohloh.  
+
+  %For this measurement, Ohloh considers only recent changes to the code. Over the
+  %entire history of the project, 32 developers have contributed.
+
+  %Average number of code comments GNU Bison is written mostly in C.
+
+  %Across all C projects on Ohloh, 19% of all source code lines are comments.
+
+  %This holds true for GNU Bison as well. It contains the same ratio of comment
+  %lines to code lines as the majority of C projects in Ohloh.
+
+  %A high number of comments might indicate that the code is well-documented and
+  %organized, and could be a sign of a helpful and disciplined development team.
+
+  \cleardoublepage
+
+  \section{Travail effectué}
+
+  \subsection{Vue d'ensemble}
+
+  Mon stage a débuté septembre 2012. Peu avant moi, en juin 2012, Victor
+  Santet (EPITA promotion 2015) était venu y faire un mois de stage. Il est
+  parti en laissant des bases intéressantes pour une poursuite du travail dans
+  sa lancée. Le travail en question portait sur les avertissements et erreurs
+  générés par Bison. J'ai donc commencé mon stage en continuant sur cette
+  lancée, et ce pendant un mois. Cette tâche correspond à l'élément [1] dans le
+  diagramme de Gantt fourni plus bas.
+
+
+  La continuation a --là encore-- été guidé très largement par les suggestions
+  de mon mentor.  Il y avait déjà une liste d'améliorations possibles maintenue
+  dans un fichier TODO, ce fut une source d'inspiration assez facile pour
+  débuter.
+
+  C'est ainsi que la suite de mon travail porta sur une option non essentielle
+  de Bison: \texttt{-{}-graph}, qui génère une visualisation de l'automate utilisé
+  par l'analyseur généré. Ce graphe était relativement pauvre, et je l'ai donc
+  enrichi. Suite à diverses complications, cette tâche pris environ un mois et
+  demi. Cette phase de développement se découpa en deux phases bien distinctes,
+  j'ai donc pris le soin de les séparer ci-après. Le lecteur les retrouvera aux
+  indices [3] et [4].
+
+  Vinrent à ce moment plusieurs nouvelles pistes d'amélioration, lancées par
+  Akim. La première ([5]) était la résolution d'un "bug" (en fait c'est n'est
+  pas vraiment un, comme je l'explique plus loin dans ce rapport) de longue
+  date qui faisait que si l'utilisateur ne spécifiait pas d'argument
+  supplémentaire pour l'interface de la fonction de rapport d'erreur alors dans
+  certains squelettes les informations de localisation de l'erreur étaient
+  absentes (mais dans d'autres si). La deuxième était une amélioration de
+  l'affichage des erreurs ([2]). En effet, le choix avait été fait de respecter
+  des conventions semblables à celles de GCC (\textit{GNU Compiler
+  Collection}), et donc l'introduction récente de changements dans le rapport
+  des erreurs par celui-ci méritait une imitation dans Bison. J'ai travaillé
+  sur ces deux aspects là en parallèle (bien que, contrairement à ce qu'on
+  pourrait croire en retenant que ces deux fonctionnalités portent sur les
+  messages d'erreurs, celles-ci étaient tout à fait orthogonales).
+
+  Ce fut alors le premier jalon de ce stage: la sortie de Bison 2.7, qui
+  incluait mes contributions de ces 3 premiers mois de stage.
+
+  Fort des connaissances acquises, je commençai alors à travailler sur les
+  squelettes de Bison.
+
+  /* FIXME: wrapper, locations, \ldots glr.cc [8] */
+
+  J'implémentai alors quelques modifications au squelette LALR C++ ([9]) mais
+  je me suis heurté à ce qu'on pourrait appeler un mur: le schéma utilisé pour
+  représenter les symboles n'était pas du tout viable si on voulait envisager
+  des améliorations du genre de ce que je proposais (et qui, honnêtement,
+  paraissent maintenant bien mineures par rapport à l'avalanche de travail
+  engendré par ce qui a suivi). On a donc du ensuite retravailler le
+  fonctionnement des symboles ([10]).
+
+  \begin{adjustwidth}{-4cm}{-2cm}
+  \begin{gantt}[xunitlength=0.7cm,fontsize=\small,titlefontsize=\small,drawledgerline=true]{14}{20}
+    \begin{ganttitle}
+      \titleelement{2012}{16}
+      \titleelement{2013}{4}
+    \end{ganttitle}
+    \begin{ganttitle}
+      \numtitle{9}{1}{12}{4}
+      \numtitle{1}{1}{1}{4}
+    \end{ganttitle}
+    \begin{ganttitle}
+      \numtitle{1}{7}{22}{1}
+      \numtitle{1}{7}{22}{1}
+      \numtitle{1}{7}{22}{1}
+      \numtitle{1}{7}{22}{1}
+      \numtitle{1}{7}{22}{1}
+    \end{ganttitle}
+    \ganttbar{warnings as errors [1]}{1}{4}
+    \ganttbarcon{caret diagnostics [2]}{10}{2}
+    \ganttbar{show reductions -g [3]}{5}{2}
+    \ganttbarcon{show reductions xslt [4]}{7}{4}
+    \ganttbar{api.pure full [5]}{10}{2}
+    \ganttmilestonecon{version 2.7 released}{14}
+    \ganttbar[color=red]{epita coding-style [6]}{12}{2}
+    \ganttbar{leak hunting [7]}{13}{2}
+    \ganttbar{glr.cc [8]}{15}{1}
+    \ganttbarcon{lalr1.cc [9]}{16}{1}
+    \ganttbarcon{symbols [10]}{17}{3}
+  \end{gantt}
+  \end{adjustwidth}
+
+  \subsection{Erreurs et avertissements}
+
+  Bison est un compilateur, il va donc tenter de construire un fichier en
+  sortie à partir d'un fichier en donné en entrée par l'utilisateur. Du coup,
+  rien ne garantit la validité de celui-ci. Il peut y avoir des informations
+  manquantes ou incompatibles dans les données lues par Bison. De fait, les
+  compilateurs sont des outils de travail avec lesquels l'utilisateur interagit
+  beaucoup, et en pratique le développeur (qui est plus habitué à ce que les
+  choses se passent mal que à ce qu'elles se passent bien) est d'ailleurs
+  souvent plus intéressé par les problèmes rencontrés par le compilateur que
+  par la sortie en assembleur elle-même: la gestion des erreurs est donc un
+  aspect très important des compilateurs en général, et ceux-ci incluent Bison.
+
+  La compatibilité avec YACC (c'est à dire le comportement décrit par l'IEEE
+  1003\footnote{%
+  http://pubs.opengroup.org/onlinepubs/009695399/utilities/yacc.html}) n'impose
+  absolument rien sur l'affichage à produire dans le terminal en cas d'erreur.
+  Le choix a donc été fait de suivre le comportement de GCC, qui distingue très
+  nettement plusieurs catégories d'erreurs:
+
+  \begin{itemize}
+    \item \textit{warnings}, les simples avertissements à l'utilisateur. Ils
+      indiquent que le compilateur a détecté quelque chose de suspect dans le
+      code de l'utilisateur, potentiellement une erreur de sa part. Le
+      programme peut tout de même continuer son exécution et produire un
+      résultat plausible.
+    \item \textit{complaints}, ou tout simplement \textit{errors}, les erreurs
+      que le compilateur rencontre sur un bout du code de l'utilisateur. Le
+      programme peut continuer à traiter le reste du code de l'utilisateur,
+      et aller le plus loin possible dans son exécution avant d'être bloqué
+      inconditionnellement. La compilation ne produit pas de fichier en sortie.
+    \item \textit{fatal errors}, les erreurs pour lesquelles ça n'aurait aucun
+      sens de continuer l'exécution plus loin. Le programme s'arrête
+      immédiatement.
+  \end{itemize}
+
+  \vspace{0.5cm}
+
+  Voici la façon dont GCC les signale, par exemple:
+
+  \begin{verbatim}
+test.c: In function ‘main’:
+test.c:6:3: error: expected declaration or statement at end of input
+test.c:4:9: warning: unused variable ‘ar’ [-Wunused-variable]
+  \end{verbatim}
+
+  On remarque que les messages commencent par \textit{error:} ou
+  \textit{warning:} selon
+  qu'il s'agisse d'une erreur ou d'un simple avertissement. On note également
+  que les avertissement sont divisés en de nombreuses catégories. Par exemple,
+  ici, l'avertissement est attaché à la catégorie \textit{unused-variable},
+  comme indiqué en fin du message.
+  Voici un extrait du manuel de GCC qui montre le type de catégories de qu'il
+  existe:
+
+  \begin{verbatim}
+Warning Options
+       -fsyntax-only  -fmax-errors=n  -pedantic -pedantic-errors -w -Wextra
+       -Wall  -Waddress -Waggregate-return  -Warray-bounds -Wno-attributes
+       -Wno-builtin-macro-redefined -Wc++-compat -Wc++11-compat -Wcast-align
+       -Wcast-qual -Wchar-subscripts -Wclobbered  -Wcomment -Wconversion
+       -Wcoverage-mismatch  -Wno-cpp -Wno-deprecated
+  \end{verbatim}
+
+  Ces options servent à activer les avertissements associés. Il est d'usage de
+  n'en activer que quelques uns par défaut et de laisser à l'utilisateur le
+  soin de sélectionner quelles catégories d'avertissements il veut que le
+  compilateur lui rapporte, ainsi que lesquelles il veut au contraire qu'il
+  ignore.
+
+  Le travail de Victor, sur lequel je me suis basé, avait ajouté le support de
+  cette organisation des avertissements de Bison en catégories, activables
+  indépendamment.
+
+  Voici un extrait du guide d'utilisation de Bison:
+
+  \begin{verbatim}
+Operation modes:
+  -h, --help                 display this help and exit
+  -V, --version              output version information and exit
+      --print-localedir      output directory containing locale-dependent data
+      --print-datadir        output directory containing skeletons and XSLT
+  -y, --yacc                 emulate POSIX Yacc
+  -W, --warnings[=CATEGORY]  report the warnings falling in CATEGORY
+
+Warning categories include:
+  `midrule-values'    unset or unused midrule values
+  `yacc'              incompatibilities with POSIX Yacc
+  `conflicts-sr'      S/R conflicts (enabled by default)
+  `conflicts-rr'      R/R conflicts (enabled by default)
+  `deprecated'        obsolete constructs
+  `other'             all other warnings (enabled by default)
+  `all'               all the warnings
+  `no-CATEGORY'       turn off warnings in CATEGORY
+  `none'              turn off all the warnings
+  `error[=CATEGORY]'  treat warnings as errors
+  \end{verbatim}
+
+  Et voici une démonstration de leur usage (notez la ressemblance avec le
+  comportement de GCC):
+
+  \begin{verbatim}
+  $ bison -Wdeprecated
+  input.yy:2.9-15: warning: deprecated directive: ‘%define variant’, use
+  ‘%define api.value.type variant’ [-Wdeprecated]
+  input.yy:3.4-5: warning: empty character literal [-Wother]
+
+  $ bison -Wno-deprecated
+  input.yy:3.4-5: warning: empty character literal [-Wother]
+
+  $ bison -Wnone
+  (n'affiche rien)
+  \end{verbatim}
+
+  Notez que Bison active par défaut un certain nombre de catégories, dont
+  \textit{deprecated} et \textit{other}.
+
+
+  \subsubsection{Avertissements de dépréciation}
+
+  A propos de ces avertissements de dépréciation, Victor avait préparé le
+  terrain pour leur utilisation, en rendant les routines de rapport d'erreurs
+  génériques non seulement entre erreurs et avertissements, mais également
+  entre avertissements de catégories différentes. Cependant, les avertissements
+  de dépréciation n'étaient jamais émis. La dépréciation n'était alors que
+  documentée, et notée en commentaire dans le code de Bison. Une de mes tâches
+  fut donc, pour générer les avertissements de l'exemple précédent,  de
+  transformer ainsi\footnote{commit 2062d72, Thu Oct 18 18:00:51 2012} les
+  \textit{scanner} et \textit{parser} de Bison-même, car c'est à ce niveau que
+  les directives déprécies sont lues par le programme, et qu'il est toujours
+  intéressant de gérer les choses le plus tôt possible pour s'en débarrasser
+  pour la suite
+
+  \begin{verbatim}
+diff --git a/src/parse-gram.y b/src/parse-gram.y
+index f0187fb..1624dde 100644
+--- a/src/parse-gram.y
++++ b/src/parse-gram.y
+@@ -317,7 +317,6 @@ prologue_declaration:
+ | "%expect" INT                    { expected_sr_conflicts = $2; }
+ | "%expect-rr" INT                 { expected_rr_conflicts = $2; }
+ | "%file-prefix" STRING            { spec_file_prefix = $2; }
+-| "%file-prefix" "=" STRING        { spec_file_prefix = $3; } /* deprecated */
+ | "%glr-parser"
+ (..)
+diff --git a/src/scan-gram.l b/src/scan-gram.l
+index 8e48148..95edacc 100644
+--- a/src/scan-gram.l
++++ b/src/scan-gram.l
++#define DEPRECATED(Msg)                                         \
++  do {                                                          \
++    size_t i;                                                   \
++    complain (loc, Wdeprecated,                                 \
++              _("deprecated directive: %s, use %s"),            \
++              quote (yytext), quote_n (1, Msg));                \
++    scanner_cursor.column -= mbsnwidth (Msg, strlen (Msg), 0);  \
++    for (i = strlen (Msg); i != 0; --i)                         \
++      unput (Msg[i - 1]);                                       \
++  } while (0)
++
+(...)
++  /* deprecated */
++  "%default"[-_]"prec"              DEPRECATED("%default-prec");
++  "%error"[-_]"verbose"             DEPRECATED("%define parse.error verbose");
++  "%expect"[-_]"rr"                 DEPRECATED("%expect-rr");
++  "%file-prefix"{eqopt}             DEPRECATED("%file-prefix");
+  \end{verbatim}
+
+  Il y a plusieurs choses intéressantes à noter, outre le fait que maintenant
+  cet avertissement soit effectivement généré.
+
+  Notez que dans le \textit{parser}, les constructions dépréciées n'étaient pas
+  traitées spécialement, ni regroupées, mais juste discrètement annotées. Par
+  souci de concision, je n'ai gardé qu'une seul telle ligne ci-dessus, mais il
+  y en avait trois dans ce fichier. J'ai déplacé la reconnaissance de ces
+  motifs un cran plus bas, dans le \textit{scanner}-même (le plus tôt, le
+  mieux c'est), où neuf autre directives dépréciées se situaient, et qui elles
+  n'étaient même pas marquées comme telles. Ces directives sont maintenant
+  regroupées dans un paragraphe, et utilisent tous une même macro, pour
+  faciliter le travail des futurs mainteneurs.
+
+  Dans la macro, on remarque l'appel à la fonction \texttt{complain}, par
+  laquelle passe tout message d'erreur ou d'avertissement, sur laquelle j'ai
+  également travaillé (détaillé plus loin).
+
+  Également intéressant, et fruit de mon travail, la présence de \texttt{unput}
+  et de la soustraction sur le curseur de position: lorsqu'une directive
+  invalide dépréciée est lue, on la supprime du flux et on recommence la
+  lecture en ayant inséré à la place la bonne directive (du coup le problème est
+  réglé pour le reste du programme, qui peut continuer sans avoir ni à gérer
+  cette directive -{}- ce qui irait à l'encontre du but de la dépréciation
+  -{}-, ni à contenir du code dupliqué) mais également en ayant pris soin de ne
+  pas corrompre les information de position des lexèmes, indispensables aux
+  facilités de correction des bugs pour l'utilisateur, ce que aurait eu lieu si
+  on avait remplacé une directive dépréciée par une autre plus longue de $n$
+  caractères, Bison signalant ainsi à l'utilisateur toute erreur plus loin sur
+  la même ligne comme étant décalée de $n$.
+
+  Voici par exemple à quoi ressemblent des informations de position erronées
+  par cette correction de la dépréciation:
+
+  \begin{verbatim}
+input.y:13.1-14: warning: deprecated directive, use '%define parse.error
+verbose' [-Wdeprecated]
+ %error_verbose %error_verbose
+ ^^^^^^^^^^^^^^
+input.y:13.16-29: warning: deprecated directive, use '%define parse.error
+verbose' [-Wdeprecated]
+ %error_verbose %error_verbose
+                ^^^^^^^^^^^^^^
+input.y:13.11-21: error: %define variable 'parse.error' redefined
+ %error_verbose %error_verbose
+           ^^^^^^^^^^^
+ input.y:13-6:         previous definition
+ %error_verbose %error_verbose
+      ^
+  \end{verbatim}
+
+  Notez le \textit{caret diagnostic} du troisième message qui souligne quelque
+  chose qui ne correspond pas à l'erreur.
+
+  Mais ce cas est en fait bien plus vicieux. Ce bug est toujours présent à ce
+  jour, d'ailleurs (alors que ceux que j'évoquais précédemment ne le sont plus,
+  mais ressemblaient exactement à ceci, et j'évite en trichant ainsi avec les
+  exemples de multiplier les exemples) Comme la nouvelle façon de demander de
+  la verbosité est de définir la variable \texttt{parse.error}, et qu'on a
+  effectué cette substitution plusieurs fois, on se retrouve avec une variable
+  redéfinie.  L'erreur se situe dans le code de substitution, pas dans le code
+  de l'utilisateur, notre système de localisation des erreurs perd donc
+  totalement les pédales et \underline{ment}. D'ailleurs, le lecteur attentif
+  aura constaté que le problème de dépréciation, qui relève du \textit{warning}
+  a généré une \textit{error}, c'est très gênant car cela implique que si
+  l'utilisateur avait fait le choix d'invoquer Bison avec l'option
+  \texttt{-Wno-deprecated}, il n'aurait pas ces avertissements pour lui mettre
+  la puce à l'oreille, il aurait juste une erreur, avec une \textit{location}
+  \underline{fausse} (ce qui aurait été le cas également avec une erreur
+  présente dans le code de l'utilisateur, mais au moins il aurait eu une chance
+  de l'y trouver alors que là elle n'existe juste pas).
+
+  Le lecteur vraiment attentif, lui, aura remarqué le dernier message, qui lui
+  commence différemment des autres: ni par \textit{error: }, ni par
+  \textit{warning: }. Il s'agit d'un information de contexte.
+
+  \subsubsection{Informations de contexte, et préfixage}
+
+  \subsection{Visualisation graphique}
+
+  \subsection{Squelettes}
+
+  \cleardoublepage
+  \section{Conclusion}
+
+  \cleardoublepage
+  \section{Annexes}
+
+  \subsection{git shortlog --author=ranquet}
+  \begin{adjustwidth}{-2cm}{-2cm}
+    %\include{commits}
+  \end{adjustwidth}
+
+  \cleardoublepage
+  \cleardoublepage
+\end{document}
+

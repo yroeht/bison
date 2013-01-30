@@ -1,0 +1,1706 @@
+\begin{verbatim}
+commit 77509cece3666d88892c9cdff01cd3c4779037fc
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Tue Jan 29 14:53:35 2013 +0100
+
+    variants: remove the 'built' assertions
+    
+    When using %define parse.assert, the variants come with additional variables
+    that are useful for development purposes. One is a boolean indicating if the
+    variant is built (to make sure we don't read a non-built variant), and the
+    other is a string describing the stored type. There is no need to have both of
+    these, the string is enough.
+    
+    * data/variant.hh (built): Remove.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit ee9cf8c4a6bf34fe291ed860e0d7779d78a5bcb0
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Mon Jan 28 18:26:04 2013 +0100
+
+    m4: generate a basic_symbol constructor for each symbol type
+    
+    Recently, there was a slightly vicious bug hidden in the make_ functions:
+    
+      parser::symbol_type
+      parser::make_TEXT (const ::std::string& v)
+      {
+        return symbol_type (token::TOK_TEXT, v);
+      }
+    
+    The constructor for symbol_type doesn't take an ::std::string& as
+    argument, but a constant variant.  However, because there is a variant
+    constructor which takes an ::std::string&, this caused the implicit
+    construction of a built variant.  Considering that the variant argument
+    for the symbol_type constructor was cv-qualified, this temporary variant
+    was never destroyed.
+    
+    As a temporary solution, the symbol was built in two stages:
+    
+      symbol_type res (token::TOK_TEXT);
+      res.value.build< ::std::string&> (v);
+      return res;
+    
+    However, the solution introduced in this patch contributes to letting
+    the symbols handle themselves, by supplying them with constructors that
+    take a non-variant value and build the symbol's own variant with that
+    value.
+    
+    * data/variant.hh (b4_symbol_constructor_define_): Use the new
+    constructors rather than building in a temporary symbol.
+    (b4_basic_symbol_constructor_declare,
+    b4_basic_symbol_constructor_define): New macros generating the
+    constructors.
+    * data/c++.m4 (basic_symbol): Invoke the macros here.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 858666c44302b355ff0cad76b457d57659306d6f
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Mon Jan 28 18:03:58 2013 +0100
+
+    c++: minor stylistic changes
+    
+    * data/c++m4: Remove useless comment lines.
+    * data/variant.hh (self_type): Use this typedef instead of variant<S>.
+    (b4_symbol_constructor_define_): Remove commented-out line, and stylistic
+    change (avoid blank line).
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit b20e797a712293b4c62912d3295648885bd1d9cf
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Mon Jan 28 17:41:31 2013 +0100
+
+    c++: better inline expansion
+    
+    Many 'inline' keywords were in the declarations.  They rather belong in
+    definitions, so move them.
+    
+    * data/c++.m4 (basic_symbol, by_type): Many inlines here.
+    * data/lalr1.cc (yytranslate_, yy_destroy_, by_state, yypush_, yypop_): Inline
+    these as well.
+    (move): Move the definition outside the struct, where it belongs.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 6908c2e1f7601e72c19e1f8c16eea1116e8b6708
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Tue Jan 15 17:51:45 2013 +0100
+
+    examples: please clang
+    
+    * doc/bison.texi (calc++-scanner.ll): Don't output useless yyinput function.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 32f4c0a1b29ed97f82ed3c41156ac6ca856a60f2
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Tue Jan 15 18:03:39 2013 +0100
+
+    tests: better silencing of unused argument warnings
+    
+    input.yy:35:44: error: unused parameter 'msg' [-Werror,-Wunused-parameter]
+    void yy::parser::error (std::string const& msg)
+                                               ^
+    
+    * tests/c++.at (C++ GLR parser identifier shadowing): Don't name unused
+    argument, use YYUSE instead of a direct cast to void.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 492dacbc342b4b7435bed2eac9ea99909e0b0aea
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Tue Jan 15 17:54:44 2013 +0100
+
+    bench: compatibility for Bison <= 2.7
+    
+    There used to be a bug in some skeletons, which caused the expansion of
+    'yylval' and 'yylloc', generating these errors:
+    
+    input.cc:547:16: error: expected ',' or '...' before '(' token
+     #define yylval (yystackp->yyval)
+                    ^
+    input.yy:29:39: note: in expansion of macro 'yylval'
+     int yylex (yy::parser::semantic_type *yylval)
+                                           ^
+    
+    This bug is fixed by 'skel: better aliasing of identifiers', but a workaround
+    is useful when benchmarking against older versions of Bison, which are still
+    affected by the bug.
+    
+    * etc/bench.pl.in: Rename yylval to yylvalp and yylloc to yyllocp in base
+    grammar 'list'.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 733fb7c593486846eca5a60d1e3ff6880ce358d7
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Tue Jan 15 13:05:21 2013 +0100
+
+    c++: remove useless inlines
+    
+    * data/c++.m4 (basic_symbol): Keep 'inline' in the prototypes, but don't
+    duplicate it in the implementation.
+    * data/variant.hh (variant): 'inline' is not needed when the implementation is
+    provided in the class definition.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 403febcac54e1d61d3196b3efb80035f883cfc85
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Tue Jan 15 12:44:37 2013 +0100
+
+    c++: m4 stylistic change
+    
+    * data/c++.m4 (syntax_error): Fix the indentation of 'inline'.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 60607adb3c14bd0fea3eb217b1a9fccd2c308122
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Mon Jan 14 19:25:35 2013 +0100
+
+    c++: silence warnings
+    
+    * data/c++.m4 (basic_symbol<Base>::operator=): Unused parameter.
+    * tests/c++.at (C++ GLR parser identifier shadowing): Here too.
+    -
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 8b4499ad042d7ca58aac4c0d6eed1e250f8546d0
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Mon Jan 14 11:02:12 2013 +0100
+
+    news: typos
+    
+    * NEWS: Fix a typo, use YYSTYPE rather than semantic_type.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 016426c19515897590c00a5a6cb223d72e3230b5
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Jan 11 13:47:57 2013 +0100
+
+    carets: document default activation
+    
+    * NEWS: Announce it.
+    * doc/bison.texi: Adjust.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 0242bf04acf60bef5ecde9f8f8babccf2e277c06
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Dec 28 13:33:04 2012 +0100
+
+    carets: show them in more tests
+    
+    * tests/input.at, tests/named-refs.at: Here.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 9c4788b7ee33cf142775a827f67bb9747ba1d2ca
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Dec 28 13:32:14 2012 +0100
+
+    carets: activate by default
+    
+    * src/getargs.c (feature_flag): Here.
+    * tests/local.at (AT_BISON_CHECK_, AT_BISON_CHECK_NO_XML): Deactivate carets
+    for the testsuite, by default.
+    * tests/input.at: Adjust the locations for command line definitions.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 6656c9b52a306b394fb6529f735924db0f08c1a2
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Jan 11 12:38:35 2013 +0100
+
+    variants: document move and swap
+    
+    * data/variant.hh (swap): Doc.
+    (build): Rename as...
+    (move): This, more coherent naming with clearer meaning.
+    * data/c++.m4 (move): Adjust.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 04816a6f3203968479591ebbe1886537674fa110
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Jan 11 11:41:07 2013 +0100
+
+    c++: privatize variant blind copies
+    
+    * data/variant.hh (variant, operator=): Make private.
+    * data/c++.m4 (operator=): New, to avoid needing a definition of that operator
+    for each class member (such as a possible variant).
+    * data/glr.cc, data/lalr.cc: Add the necessary include for the abort.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 99d795e8f28470838cc45bd38ce3da9503fe20fb
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Jan 4 12:30:01 2013 +0100
+
+    skel: better aliasing of identifiers
+    
+    * data/glr.c, data/yacc.c: Avoid emitting useless defines.
+    * data/glr.cc: Restore prefixes for epilogue.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 0707d0c7fabeb319933aaea1bb7aa5d68101ac47
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Jan 4 18:52:21 2013 +0100
+
+    glr.cc: fatal if using api.token.ctor without variants
+    
+    * data/glr.cc: Here.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 462b243e1d32c5b6293163d2ebb5135962b83242
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Wed Jan 9 12:46:55 2013 +0100
+
+    skel: correctly indent switch cases
+    
+    * data/bison.m4 (b4_type_action_): Here.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit bb1f0f52264dffe36595c65cde310ce965ec1df6
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Dec 21 16:48:54 2012 +0100
+
+    variants: assert changes
+    
+    * data/variant.hh (swap): More asserts can't hurt. Don't perform useless swaps.
+    (build): Deactivate problematic asserts, pending further investigation.
+    (variant): Prohibit copy construction.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit e7b26e942d1466974e40a70a30d9044c4a90fd85
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Dec 21 16:46:05 2012 +0100
+
+    lalr1.cc: use a vector for the symbol stack
+    
+    * data/lalr1.cc: Adjust includes.
+    * data/stack.hh (push, pop): Use push_back and pop_back.
+    (operator []): Access vector from the end.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 1dbaf37f5cd0bc0e7c6a91b8996ae974c8d2cdc1
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Dec 21 16:49:48 2012 +0100
+
+    lalr1.cc: change symbols implementation
+    
+    A "symbol" groups together the symbol type (INT, PLUS, etc.), its
+    possible semantic value, and its optional location.  The type is
+    needed to access the value, as it is stored as a variant/union.
+    
+    There are two kinds of symbols. "symbol_type" are "external symbols":
+    they have type, value and location, and are returned by yylex.
+    "stack_symbol_type" are "internal symbols", they group state number,
+    value and location, and are stored in the parser stack.  The type of
+    the symbol is computed from the state number.
+    
+    The class template symbol_base_type<Exact> factors the code common to
+    stack_symbol_type and symbol_type.  It uses the Curiously Recurring
+    Template pattern so that we can always (static_) downcast to the exact
+    type.  symbol_base_type features value and location, and delegates the
+    handling of the type to its parameter.
+    
+    When trying to generalize the support for variant, a significant issue
+    was revealed: because stack_symbol_type and symbol_type _derive_ from
+    symbol_base_type, the type/state member is defined _after_ the value
+    and location.  In C++ the order of the definition of the members
+    defines the order in which they are initialized, things go backward:
+    the value is initialized _before_ the type.  This is wrong, since the
+    type is needed to access the value.
+    
+    Therefore, we need another means to factor the common code, one that
+    ensures the order of the members.
+    
+    The idea is simple: define two (base) classes that code the symbol
+    type ("by_type" codes it by its type, and "by_state" by the state
+    number).  Define basic_symbol<Base> as the class template that
+    provides value and location support.  Make it _derive_ from its
+    parameter, by_type or by_state.  Then define stack_symbol_type and
+    symbol_type as basic_symbol<by_state>, basic_symbol<by_type>.  The
+    name basic_symbol was chosen by similarity with basic_string and
+    basic_ostream.
+    
+    * data/c++.m4 (symbol_base_type<Exact>): Remove, replace by...
+    (basic_symbol<Base>): which derives from its parameter, one of...
+    (by_state, by_type): which provide means to retrieve the actual type of
+    symbol.
+    (symbol_type): Is now basic_symbol<by_type>.
+    (stack_symbol_type): Is now basic_symbol<by_state>.
+    * data/lalr1.cc: Many adjustments.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit ca42755f13e176c481a537ce2bb1ec735e09915f
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Wed Dec 26 16:26:17 2012 +0100
+
+    bench: add %b directive to use a specific Bison
+    
+    For example,
+      $ bench.pl -v '%s lalr1.cc & %d variant & ( %b ~/old-bison/bin/bison
+        | %b ~/new-bison/bin/bison )' -g list -i 10000
+    
+    * etc/bench.pl.in: Here.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 432a008d34bdf2178f293d144066ee64977c59f9
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Thu Dec 13 11:28:11 2012 +0100
+
+    carets: properly display when no line feed is present
+    
+    * src/location.c (location_caret): finish the line with one whether or not it
+    is present in input. Rewrite code without getline.
+    (cleanup_caret): Reset the caret_info global.
+    * bootstrap.conf: No longer require getline.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit c1b2677ad0a0a507010fa7dde5ff07dbe4596a10
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Thu Nov 15 17:10:35 2012 +0000
+
+    scanner: reintroduce unput for missing end tokens
+    
+    Unput was no longer used since a POSIX-compatiblity issue with Flex 2.5.31,
+    which has been adressed in newer versions of Flex.  See this discussion:
+    <http://lists.gnu.org/archive/html/bug-bison/2003-04/msg00029.html>
+    
+    This partially reverts commit aa4180418fff518198e1b0f2c43fec6432210dc7.
+    
+    * src/scan-gram.l (unexpected_end): Here.
+    * tests/input.at: Adjust for new order of error reports.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit f039b5180581b8aed982e4c3107ceebfb82703f8
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Tue Dec 4 16:09:24 2012 +0100
+
+    doc: fix build dependencies
+    
+    Suggested by Nick Bowler
+    <http://lists.gnu.org/archive/html/bug-automake/2012-12/msg00001.html>
+    
+    * doc/local.mk: Avoid overwriting Automake's rules.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit e96b1b2c452d62d0fe9cef4338c882db0b7d0691
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Tue Dec 11 13:23:44 2012 +0100
+
+    symtab: add missing initializations
+    
+    * src/symtab.c (semantic_type_new): Here.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit ae9c90ba004680b0acfa6ef7aa457c4c0cfc43d7
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Tue Dec 11 13:16:22 2012 +0100
+
+    symtab: fix some leaks
+    
+    * src/symlist.c (symbol_list_free): Deep free it.
+    * src/symtab.c (symbols_free, semantic_types_sorted): Free it too.
+    (symbols_do, sorted): Call by address.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit be27db79a5ec25e1d86799f9e88532d9cc2c55f4
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Mon Dec 10 19:28:43 2012 +0100
+
+    tests: remove use of PARSE_PARAM
+    
+    * tests/header.at: Here.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 0906b12cd56f9777fb684b8a257a0e56c090a93c
+Merge: f3ead21 d4fe9e8
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Mon Dec 10 17:01:55 2012 +0100
+
+    Merge remote-tracking branch 'origin/maint'
+    
+    * origin/maint:
+      news: prepare for forthcoming release
+      doc: explain how mid-rule actions are translated
+      error: use better locations for unused midrule values
+      doc: various minor improvements and fixes
+      tests: ignore more useless compiler warnings
+      tests: be robust to C being compiled with a C++11 compiler
+      build: beware of Clang++ not supporting POSIXLY_CORRECT
+      maint: post-release administrivia
+      version 2.6.90
+      build: fix syntax-check error.
+      cpp: simplify the Flex version checking macro
+      news: improve the carets example and fix a typo
+      cpp: improve the Flex version checking macro
+      carets: improve the code
+      maint: update news
+      build: keep -Wmissing-declarations and -Wmissing-prototypes for modern GCCs
+      build: drop -Wcast-qual
+      gnulib: update
+    
+    Conflicts:
+    	NEWS
+    	doc/Makefile.am
+    	doc/bison.texi
+    	gnulib
+    	src/reader.c
+    	tests/actions.at
+    	tests/atlocal.in
+    	tests/input.at
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 9318e335c809a832078e8efad4054cbb456ad1da
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Dec 7 12:13:38 2012 +0100
+
+    cpp: simplify the Flex version checking macro
+    
+    * src/flex-scanner,h (FLEX_VERSION): Consider YY_FLEX_SUBMINOR_VERSION
+    defined.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit fb6040f0a8cd3ddce85bac3286392a01206f5b55
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Dec 7 11:57:19 2012 +0100
+
+    news: improve the carets example and fix a typo
+    
+    * NEWS: Here.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit c49e2f153521a86f22b2631ca8a1fb6389c3a70e
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Thu Dec 6 13:21:36 2012 +0100
+
+    cpp: improve the Flex version checking macro
+    
+    * src/flex-scanner.h (FLEX_VERSION): Here.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit dbda56040076e602f3494c5499a50d0452b162b5
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Thu Dec 6 13:17:55 2012 +0100
+
+    carets: improve the code
+    
+    * src/location.c: Remove duplicate documentations.
+    (caret_info): Stylistic change.
+    (location_caret): Many reworks.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit f3ead217b8636f623399e66bd937b1c51774d4af
+Merge: d6dc4d3 9960a6a
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Thu Dec 6 11:43:02 2012 +0100
+
+    Merge remote-tracking branch 'origin/maint'
+    
+    * origin/maint:
+      misc: pacify the Tiny C Compiler
+      cpp: make the check of Flex version portable
+      misc: require getline
+      c++: support wide strings for file names
+      doc: document carets
+      tests: enhance existing tests with carets
+      errors: show carets
+      getargs: add support for --flags/-f
+    
+    Conflicts:
+    	doc/bison.texi
+    	m4/.gitignore
+    	src/complain.c
+    	src/flex-scanner.h
+    	src/getargs.c
+    	src/getargs.h
+    	src/gram.c
+    	src/main.c
+    	tests/headers.at
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 9960a6ae75842aa7836f39b59e82eef0319338bc
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Thu Dec 6 10:49:12 2012 +0100
+
+    misc: pacify the Tiny C Compiler
+    
+    * src/graphviz.c (conclude_red): Remove a useless return.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit b56484a5d3f983b163287f5bf0a77b80529200cf
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Wed Dec 5 18:26:36 2012 +0100
+
+    cpp: make the check of Flex version portable
+    
+    This was problematic with tcc 0.9.25
+    
+    * src/flex-scanner.h (FLEX_VERSION_GT): Rewrite and rename as...
+    (FLEX_VERSION): This.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit e35cd6def7a19423a5f0fc566d844f6019df111a
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Wed Dec 5 15:27:25 2012 +0100
+
+    misc: require getline
+    
+    * bootstrap.conf: Here, used by src/location.c.
+    * src/getargs.c (long_options): Rename --flags to --feature.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 7bada5355e10f560269825cbd658caaa473573f7
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Tue Dec 4 13:12:12 2012 +0100
+
+    doc: document carets
+    
+    * NEWS: Announce it.
+    * doc/bison.texi (Bison Options):  Here.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 505ece51710209eb4aba50166f8f7ddc57d0562b
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Mon Dec 3 11:12:07 2012 +0100
+
+    tests: enhance existing tests with carets
+    
+    * tests/actions.at: Unset value.
+    * tests/conflicts.at: Rule useless due to conflicts.
+    * tests/input.at: Missing terminator, unexpected end of file, command line
+    redefinition of variable.
+    * tests/named-refs.at: Many errors.
+    * tests/reduce.at: Useless nonterminals and rules.
+    * tests/regression.at: Large token.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 3f5d1b2c67651a9d620946de421f2e51600b885e
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Nov 30 14:34:56 2012 +0100
+
+    errors: show carets
+    
+    * src/locations.c (caret_info): New, persistant information useful
+    for...
+    (location_caret): New, print a caret.
+    (cleanup_caret): Release caret_info cleanly, call it...
+    * src/main.c (main): Here.
+    * src/complain.c (error_message): Call location_caret here.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 0db2648930e3b6c376a539aabe368aade83ee29a
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Nov 30 14:33:05 2012 +0100
+
+    getargs: add support for --flags/-f
+    
+    Introduce -fdiagnostics-show-caret
+    
+    * src/getargs.c (flag_flag): New global.
+    * src/getargs.h (flag): New enum.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit effd30c08d3f9d936a67c6b7a9a4253915711c74
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Nov 30 15:27:54 2012 +0100
+
+    getargs: don't label --language/-l as experimental
+    
+    * NEWS: Announce it.
+    * doc/bison.texi, src/getargs.c (usage): Here.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit a37131cc63607b8fa59ba58296dd0b1682ec54d5
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Mon Mar 12 10:01:09 2012 +0100
+
+    getargs: fix the locations of command-line input
+    
+    * src/getargs.c (command_line_location): Here.
+    * tests/input.at: Adjust.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit d4e985d587a0111c8ad39cd56b815a7f63540116
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Thu Nov 15 12:02:40 2012 +0000
+
+    errors: indent missing action code semicolon warning
+    
+    Also, remove a duplicate #define.
+    
+    * src/scan-code.l (SC_RULE_ACTION): Here.
+    * tests/actions.at: Adjust.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 1f1bd5729743e155e71767810eaef22bd84e340b
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Mon Nov 26 18:17:15 2012 +0100
+
+    doc: introduce api.pure full, rearrange some examples
+    
+    * NEWS: Add entry.
+    * doc/bison.texi (%define Summary): Show the old Yacc behaviour.
+    (Parser Function): Move parse-param examples here.
+    (Pure Calling): Remove parse-param examples.
+    (Error Reporting): Don't show the old behavior, stick to 'full'.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 6428a8a4a569b0b7ac1b84bdd78efc3fe18160ca
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Nov 23 17:30:47 2012 +0000
+
+    yacc.c: support "%define api.pure full"
+    
+    This makes the interface for yyerror() pure without the need for a spurious
+    parse_param.
+    
+    * data/yacc.c (b4_pure_if, b4_pure_flag): New definition, accept three states.
+    (b4_yacc_pure_if): Rename as...
+    (b4_yyerror_arg_loc_if): This, and use b4_pure_flag.
+    * tests/actions.at (%define api.pure): Modernize.
+    * test/calc.at (Simple LALR Calculator): Modernize.
+    * tests/local.at (AT_YYERROR_ARG_LOC_IF): Adjust.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit dbb998364f6a3057ab65a5ed4b6190396cf5eaf2
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Nov 23 16:23:27 2012 +0000
+
+    local.at: improvements
+    
+    * tests/local.at (AT_YYERROR_FORMALS): Make llocp const.
+    (AT_PURE_AND_LOC_IF, AT_GLR_OR_PARAM_IF): Remove, expand...
+    (AT_YYERROR_ARG_LOC_IF): Here, and use m4_join for readability.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit fb4c8a7cb97844f6c66921a77e79311a19d12fc2
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Mon Nov 19 10:43:56 2012 +0000
+
+    yacc.c: always initialize yylloc
+    
+    The initial location might be used if the parser starts by an empty
+    reduction, so really ensure proper initialization of the initial
+    location.  The previous approach fails for PostgreSQL, which uses
+    Reported by Peter Eisentraut.
+    http://lists.gnu.org/archive/html/bug-bison/2012-11/msg00023.html
+    With help from Théophile Ranquet.
+    
+    * data/yacc.c (b4_declare_scanner_communication_variables): Be sure
+    to initialize yylloc, even when its structure is unknown.
+    (yyparse): Simplify the call to b4_dollar_pushdef.
+    * tests/actions.at (Initial location): Check of similar pattern
+    as in the case of PostgreSQL.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 05c93b7d844e59ecaa5dec3bd6d9091f5aa5d1b0
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Mon Nov 12 15:41:52 2012 +0000
+
+    tests: close files in glr-regression
+    
+    * tests/glr-regression.at: Here.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit be3517b007a833ffec1735691f256f6a37e4a67f
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Tue Oct 23 15:43:54 2012 +0000
+
+    xml: match DOT output and xml2dot.xsl processing
+    
+    Make the DOT produced by XSLT processing equivalent to the one made with the
+    --graph option.
+    
+    * data/xslt/xml2dot.xsl: Stylistic changes, and add support for reductions.
+    * doc/bison.texi (Xml): Update.
+    * src/graphviz.c (conclude_red): Minor stylistic changes to DOT internals.
+    (output_red): Swap enabled and disabled reductions output, for coherence
+    with XSLT output.
+    * src/print_graph.c (print_core): Minor stylistic change to States' output.
+    (print_actions): Swap order of output for reductions and transitions.
+    * tests/local.at (AT_BISON_CHECK_XML): Ignore differences in order.
+    * tests/output.at: Adjust to changes in DOT internals.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 489b320d4a70692313a059b10786913a1310f617
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Wed Nov 7 09:54:06 2012 +0000
+
+    xml: factor xslt space template
+    
+    * data/xslt/bison.xsl (space): New, import from...
+    * data/xslt/xml2text.xsl: Here.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit ccda5c9eacfd97f0064c8d6102d3c5f06cb541c1
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Nov 9 16:40:45 2012 +0000
+
+    graph: fix a memory leak
+    
+    * src/graphviz.c (output_red): Here.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 9c16d39944f2083dde29e364c1f61aebae6f2643
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Mon Oct 22 17:37:57 2012 +0000
+
+    xml: documentation
+    
+    The XML output combined with the XSL Transformations provided in data/ are
+    incredibly useful, they should be documented.
+    
+    * doc/bison.texi (Xml): New node.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit d42fe46ec330a0b202b28c2af4c8171a627ab531
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Thu Oct 18 12:02:05 2012 +0000
+
+    output: capitalize State
+    
+    * src/print.c (print_state): Here.
+    * tests/conflicts.at, tests/existing.at, tests/local.at, tests/reduce.at,
+    tests/regression.at, tests/sets.at: Adjust.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 32288c8cbd309b29dff45e81d78374a5eb9c006e
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Oct 26 18:07:08 2012 +0000
+
+    graphs: fix spacing refactoring
+    
+    * src/print_graph.c (print_lhs, print_core): Here.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit ed91d427fe80ea2c5991c8862b0145613b9a0650
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Oct 26 17:54:56 2012 +0000
+
+    tests: make deprecation tests more specific
+    
+    * tests/input.at (Deprecated directives): Here, don't generate unrelated errors
+    or warnings.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit e89d8806ea418f44c72aed97910ce609ad80f849
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Oct 26 16:11:08 2012 +0000
+
+    tests: fix AT_BISON_CHECK_WARNINGS_ stderr rewriting
+    
+    * tests/input.at (Deprecated directives): Avoid spurious error.
+    * tests/locat.at (AT_BISON_CHECK_WARNINGS): Adjust for recent changes.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 23ac665d2181daaa21a0d151be3f6f2a2380e014
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Oct 26 18:13:44 2012 +0000
+
+    scan-skel.l: consider m4 notes as related to "complaint" errors
+    
+    * src/scan-skel.l (flag): Here.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit ac0eca3ccbf4dada77577cc18d28857eb77087aa
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Oct 26 18:13:27 2012 +0000
+
+    warnings: distinguish context information based on warning type
+    
+    * src/scan-code.l (show_sub_message, show_sub_messages): Take a new warnings
+    argument.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 697a8022c656f8081d71d470e7b538f699af372c
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Oct 26 18:12:53 2012 +0000
+
+    warnings: fix early exit of warnings treated as errors
+    
+    Treating warnings as errors caused Bison to exit earlier than needed, making it
+    hide warnings that would have been printed had -Werror not been set.
+    
+    Also, fix a bug that caused some context information of errors to not be
+    shown.
+    
+    * src/complain.c (complaint_issued): Rename as...
+    (complaint_status): This, and change its type from boolean to
+    * src/complain.h (err_status): This, new enumeration.
+    * src/main.c (main): Adjust (only finish early if an actual complaint was
+    risen, not a mere warning treated an error).
+    * src/reader.c: Adjust.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 8f6bbe0c106114eec8988eadaa25d59969439986
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Thu Oct 25 12:12:28 2012 +0000
+
+    tests: reindent for legibility
+    
+    * tests/local.at (AT_BISON_CHECK_WARNINGS_): Here.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 6b1cbda1b9e0e8f29c0a6e4e44ce2d5a2aee974f
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Mon Oct 22 14:19:31 2012 +0000
+
+    misc: document TESTSUITEFLAGS in README-hacking
+    
+    * README-hacking: Document -j and -k flags.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 0f92546f47f5bdac1025ca4b423c1ebfc90dc1fa
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Mon Oct 22 11:10:53 2012 +0000
+
+    deprecation: add tests
+    
+    * tests/input.at (Deprecated directives warn, Non-deprecated
+    directives don't, Unput doesn't mess up locations): New tests.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 25b27513d94852f670983b2165e4e2d22eeaff45
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Wed Oct 24 10:46:03 2012 +0000
+
+    regen
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 2062d72deb37782eb2c842e8dd1e606db5accbd1
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Thu Oct 18 18:00:51 2012 +0000
+
+    deprecation: issue warnings in scanner
+    
+    * src/parse-gram.y: Move the handling of (three) deprecated constructs ...
+    * src/scan-gram.l: ...Here, and issue warnings.
+    (DEPRECATED): New.
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 90b1335aed1edcbead0b50446b85c9a32d7c295f
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Wed Oct 3 15:26:56 2012 +0000
+
+    maint: fix an erroneous include
+    
+    This fixes test 130 (Several parsers).
+    
+    * data/location.cc: Include <iostream> rather than <iosfwd> since
+    we really need << on strings for instance.
+    * NEWS: Document this.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit fc4fdd623e7613c002f7c7d6cb73b4ab4bb5b494
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Thu Oct 18 15:38:32 2012 +0000
+
+    graphs: documentation
+    
+    Note that 'make web-manual' fails.
+    
+    * NEWS: Document these changes.
+    * doc/Makefile.am: Adjust to generate example files.
+    * doc/bison.texi: Add a Graphviz section after "Understanding::", the section
+    describing the .output file, because these are similar.
+    * doc/figs/example-reduce.dot, doc/figs/example-reduce.txt,
+    doc/figs/example-shift.dot, doc/figs/example-shift.txt: New, minimal
+    examples to illustrate the documentation.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit dd47b5220cb0346e3dd8d873f09b606733adf836
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Thu Oct 18 15:38:33 2012 +0000
+
+    graphs: add tests, introducing -k graph
+    
+    * tests/output.at (AT_TEST): New.
+    Use it to add 6 --graph tests.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit ce6cf10f73b2eabdb460ade6e4813254459f442a
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Thu Oct 18 15:38:31 2012 +0000
+
+    graphs: change the output format of the rules
+    
+    Use something similar to the report file.
+    
+    * src/print_graph.c (print_lhs): New, obstack equivalent of rule_lhs_print.
+    (print_core): Use here.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 8048226f50f62fb64044625bf0ebbdc403a6776e
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Thu Oct 18 15:38:30 2012 +0000
+
+    graphs: style changes
+    
+    * src/graphviz.c (start_graph): Use courier font.
+    (conclude_red): Use commas to separate attributes. Show the acceptation
+    as a special reduction, with a blue color and an "Acc" label. Show the
+    lookahead tokens between square brackets.
+    (output_red): No longer label default reductions.
+    * src/print_graph.c (print_core): Refactor spacing, and print an
+    additional space between a rule's rhs and its lookahead tokens. Also,
+    capitalize "State".
+    (print_actions): Style, move a declaration.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 85935600ad544bfe16ede35621f0b96b5d3dce81
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Thu Oct 18 15:38:29 2012 +0000
+
+    graphs: address an issue with R/R conflicts
+    
+    All disabled reductions should now be shown as such.
+    
+    * src/graphviz.c (output_red): Here.
+    (conclude_red): New.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit f60321dc590673828a6b6aed652523927d11adc8
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Mon Oct 15 17:03:17 2012 +0000
+
+    scan-skel.l: shift complain_args arguments
+    
+    Because argv[0] is never used, shift it out from the argument list.
+    
+    * src/complain.c (complain_args): Here.
+    * src/scan-skel.l (at_complain): Adjust argv and argc.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 56f0d1d187733e2b04c68591f4d6f66443c7dd37
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Mon Oct 15 17:03:16 2012 +0000
+
+    scan-skel.l: formatting changes
+    
+    * src/scan-skel.l (fail_for_at_directive_too_few_args): Here.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit d79683fa95d91c3afd4de8ee010d0d013a84a222
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Thu Oct 11 16:09:03 2012 +0000
+
+    graphs: minor style changes
+    
+    * src/graphviz.c (output_red): Fix C90 issues.
+    Reduce variable scopes.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 83bae26d3f9b374fb189703aa8795ecb3240bab2
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Mon Oct 8 06:11:41 2012 +0000
+
+    graphs: show reductions
+    
+    * src/graphviz.c (output_red): New, show reductions on the graph.
+    (no_reduce_bitset_init): New, initialize a bitset.
+    (print_token): New, print a lookahead token.
+    (escape): New, print "foo" as \"foo\" because Dot doesn't like quotes within
+    a label.
+    
+    * src/graphviz.h : Adjust.
+    * src/print_graph.c (print_actions): Call output_red here.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 9fc99ca35009c1be76ce1c73133833ad82562a8b
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Wed Oct 10 17:14:04 2012 +0000
+
+    graphs: style: prefix state number with "state"
+    
+    * src/print_graph.c (print_core): Here.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit a13121f75994966dfbb7bed4de31dd7bb2516350
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Mon Oct 8 15:53:44 2012 +0000
+
+    graphs: style: use left justification for states
+    
+    The label text of nodes is centered "by default" (by the use of '\n' as
+    a line feed). This gives bad readability to the grammar rules shown in
+    state nodes, a left justification is much nicer. This is done by using '\l'
+    as the line feed.
+    
+    In order to allow \l in the DOT file, changes to the quoting system seem
+    necessary.
+    
+    * src/print_graph.c (print_core): Escape tokens here, instead of...
+    * src/graphviz.c (output_node): Here...
+    (escape): Using this, new.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 2be37f19fe2165fcfd8752a30b55308a5bdb9b84
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Wed Oct 10 17:14:02 2012 +0000
+
+    graphs: style: prefix rules and change shapes
+    
+    * src/graphviz.c (start_graph): Use box rather than ellipsis.
+    * src/print_graph.c (print_core): Prefix rules with their number.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 47a31596c62b2d25dd68ca11df30dccef4944e13
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Wed Oct 10 17:14:01 2012 +0000
+
+    obstack: import obstack_finish0 from master
+    
+    * src/system.h (obstack_finish0): New.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 92f39ba6dc740ac1f9597e256014ae8740b0477d
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Thu Oct 4 15:23:40 2012 +0200
+
+    scan-skel: recognize the @directives directly in scanner
+    
+    * src/scan-skel.l (at_directive, at_init): New.
+    (at_ptr): New, function pointer used to call the right at_directive
+    function (at_basename, etc.).
+    (outname): Rename as...
+    (out_name): this, for consistency with out_lineno.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 896517cdf0bac6da7fabc52509205724eb1a9e28
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Thu Oct 4 15:12:56 2012 +0200
+
+    scan-skel: split @directive functions
+    
+    * src/scan-skel.l (at_directive_perform): Split as...
+    (at_basename, at_complain, at_output): these.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit c6c8de1609da38a4ffb6dbed8047491d85d57e3d
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Thu Oct 4 10:35:42 2012 +0000
+
+    errors: support indented context info in m4 macros
+    
+    * TODO: Address the issue, so remove it.
+    * data/bison.m4: Use b4_error with [[note]] rather than a complain_at
+    for context information.
+    * src/complain.c (complain_args): Take an additional argument, an
+    indentation pointer, to allow the dispatching of context information.
+    * src/complain.h (complain_args): Adjust prototype.
+    * src/scan-skel.l (at_directive_perform): Recognize the new @note mark.
+    * tests/input.at: Adjust.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 0505df0cbae4065b17f3fb6953c68f87217e7ea2
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Thu Oct 4 10:35:41 2012 +0000
+
+    errors: factor b4_error @directives
+    
+    Instead of @complain, @warn, and @fatal, use a unique @complain
+    directive. This directive's first argument is "complain", "warn", etc.
+    
+    * data/bison.m4 (m4_error): Here.
+    * src/scan-skel.l (at_directive_perform): Adjust.
+    (flag): Replace the switch by safer and more explicit if branches.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit b999409e09db9adfbc7a80569c4e7a8cb0587adf
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Thu Oct 4 10:35:40 2012 +0000
+
+    errors: pointerize complain_at_indent
+    
+    * src/complain.c (complain_at_indent): Rename as...
+    (complaint_indent): This, and take the location as a pointer.
+    * src/complain.h, src/muscle-tab.c, src/reader.c, src/scan-code.l,
+    src/symtab.c: Adjust.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit a2b3f10183008612c4350e072d5611e0b6a8a462
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Wed Oct 3 15:26:56 2012 +0000
+
+    maint: fix an erroneous include
+    
+    This fixes test 130 (Several parsers).
+    
+    * data/location.cc: Include <iostream> rather than <iosfwd> since
+    we really need << on strings for instance.
+    * NEWS: Document this.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 20964c33f91dc49b9f1b97a85505dd69776fe41c
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Mon Oct 1 15:01:03 2012 +0000
+
+    warnings: separate flags_argmatch
+    
+    This function is now a mere iterator that calls flag_argmatch,
+    a new function, that matches a single option parameter.
+    
+    * src/getargs.c (flag_argmatch): New, taken from...
+    (flags_argmatch): Here.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit a686f6cdc0077cea9f705f3c87bb8fc4fa27e1b4
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Mon Oct 1 15:01:02 2012 +0000
+
+    warnings: refactoring
+    
+    The code here was too confusing, this seems more natural.
+    
+    * src/complain.c (error_message): Move the indentation check and the category
+    output to complains. Also, no longer take a 'warnings' argument.
+    (complains): Factor calls to error_message.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 46b7d74cb5d2f4ccefdf92f46d25cd8761324f18
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Mon Oct 1 15:01:01 2012 +0000
+
+    formatting changes
+    
+    * src/complain.c: Here.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 782e8187185a009ce698ad294c87e49a0a30c3a1
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Mon Oct 1 15:01:00 2012 +0000
+
+    warnings: organize variadic complaints call
+    
+    Move the dispatch of variadic complains to complain.c, rather than do
+    it in a scanner.
+    
+    * src/complain.h, src/complain.c (complain_args): New.
+    * src/scan-skel.l (at_directive_perform): Use it.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit bb8e56ff67d289d15f1a4dc7f5e1502cd3bbfc24
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Mon Oct 1 13:44:20 2012 +0000
+
+    warnings: fusion of complain and complain_at
+    
+    These functions are very similar, and keeping them seperate makes
+    future improvements difficult, so merge them.
+    
+    This impacts 89 calls.
+    
+    * src/bootstrap.conf: Adjust.
+    * src/complain.c (complain, complain_at): Merge into...
+    (complain): this.
+    (complain_args): Adjust.
+    * src/complain.h, src/conflicts.c, src/files.c, src/getargs.c,
+    * src/gram.c, src/location.c, src/muscle-tab.c, src/parse-gram.y,
+    * src/reader.c, src/reduce.c, src/scan-code.l, src/scan-gram.l,
+    * src/scan-skel.l, src/symlist.c, src/symtab.c:
+    Adjust.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit a49f4904c36d585fa057b681c38af4d48de7c23b
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Mon Oct 1 13:44:19 2012 +0000
+
+    warnings: remove spurious suffixes on context
+    
+    Rectify a bug that introduced suffixes out of place.
+    
+    * src/complainc.c (complains): Handle all three special warning bits.
+    * src/scan-code.l (show_sub_message): Remove useless argument.
+    * tests/named-refs.at: Adjust.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit b506d9bfcb9e96d07264a43da7bdf136329dbc86
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Fri Sep 28 12:12:59 2012 +0000
+
+    errors: indent "user token number redeclaration" context
+    
+    This is the continuation of the work on the readability of errors
+    context.
+    
+    * src/symtab.c (user_token_number_redeclaration): Use
+    complain_at_indent to output with increased indentation level.
+    * tests/input:at: Apply this change.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 46bdb8ec593ea0cfd1604b7d1253a3af1c571e6d
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Thu Sep 27 10:52:47 2012 +0000
+
+    errors: don't display "warnings treated as errors"
+    
+    This line doesn't add any meaningful information anymore, the appended
+    [-Werror=CATEGORY] is enough.  It is actually more insightful, as it
+    allows to distinguish warnings treated as errors from those that
+    aren't.  This line is also removed by gcc 4.8.
+    
+    * src/complain.c (set_warnings_issued): The only action left was
+    checking if the error bit corresponding to the warning issued was set,
+    and that function was only called once. Therefore, remove it, and do
+    its job directly in the caller...
+    (complains): here.
+    * src/complains.h: Adjust.
+    * tests/input.at: Adjust.
+    * NEWS: Document this change.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 9503b0a4a8928afa0fdab88672f6127ee7e87963
+Author: Theophile Ranquet <theophile.ranquet@gmail.com>
+Date:   Thu Sep 27 10:52:45 2012 +0000
+
+    errors: introduce the -Werror=CATEGORY option
+    
+    This new option is a lot more flexible than the previous one. Its
+    details will be discussed in the NEWS and info file, in a forthcoming
+    change.
+    
+    If no category is specified (ie: used as simply "-Werror"), the
+    functionality is the same as before.
+    
+    * src/complain.c (errors_flag): New variable.
+    (set_warning_issued): Accept warning categories as an argument.
+    * src/complain.h (Wall): Better definition.
+    * src/getargs.c (flags_argmatch): Support for the new format.
+    (usage): Update -Werror to -Werror[=CATEGORY] format.
+    
+    * src/complain.c (errors_flag): New variable.
+    (set_warning_issued): Accept warning categories as an argument.
+    * src/complain.h (Wall): Better definition.
+    * src/getargs.c (flags_argmatch): Support for the new format.
+    (usage): Update -Werror to -Werror=[CATEGORY] format.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit bd52638008b361db9b368923a976a08d934efcd7
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Wed Sep 26 11:49:23 2012 +0200
+
+    warnings: introduce -Wdeprecated in the usage info
+    
+    The deprecated warning, introduced some time ago, was not displayed in
+    the usage message. This patch addresses the issue.
+    
+    * src/getargs.c (usage): Insert here.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit b8e7ad588711ab1a87a7c30667a8d84fed72d75a
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Wed Sep 26 11:49:22 2012 +0200
+
+    errors: prefix the output with "error: "
+    
+    This improves readability. This is also what gcc does.
+    
+    * NEWS: Document this change.
+    * src/complain.c (complain_at): Prefix all errors with "error: ".
+    (complain_at_indent, warn_at_indent): Do not prefix the context
+    information of errors, which are basically just indented errors.
+    * tests/conflicts.at, tests/glr-regression.at, tests/input.at,
+    tests/named-refs.at, tests/output.at, tests/push.at,
+    tests/regression.at, tests/skeletons.at: Apply this change.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit a974c1ec2608ffbff4780210aa4bad025d361271
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Wed Sep 26 11:49:21 2012 +0200
+
+    errors: indent "invalid value for %define" context
+    
+    This is the continuation of the work on the readability of errors
+        context.
+    
+    For example, what used to be:
+      input.y:1.9-29: invalid value for %define variable 'foo' : 'bar'
+      input.y:1.9-29: accepted value: 'most'
+    
+    is now:
+      input.y:1.9-29: invalid value for %define variable 'foo' : 'bar'
+      input.y:1.9-29:     accepted value: 'most'
+    
+    * src/muscle-tab.c (muscle_percent_define_check_values): Use
+    complain_at_indent to output with increased indentation level.
+    * tests/input:at: Apply this change.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 6b1e1872d482435960c10f425df3c7000dc05266
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Wed Sep 26 11:49:20 2012 +0200
+
+    errors: indent "%define var" redefinition context
+    
+    This is the continuation of the work on the readability of errors
+    context.
+    
+    For example, what used to be:
+      input.y:2.9-11: %define variable 'var' redefined
+      input.y:1.9-11: previous definition
+    
+    is now:
+      input.y:2.9-11: %define variable 'var' redefined
+      input.y:1.9-11:     previous definition
+    
+    * src/muscle-tab.c (muscle_percent_define_insert): Use
+    complain_at_indent to output with increased indentation level.
+    * tests/input.at: Apply this change.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit cbaea0106d2c70e45ddb5fa6d662d31c9bb3d4f8
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Wed Sep 26 11:49:19 2012 +0200
+
+    errors: indent "symbol redeclaration" context
+    
+    This is the continuation of the work on the readability of errors
+    context.
+    
+    For example, what used to be:
+      input.y:5.10-24: %printer redeclaration for <field2>
+      input.y:3.11-25: previous declaration
+    
+    is now:
+      input.y:5.10-24: %printer redeclaration for <field2>
+      input.y:3.11-25:     previous declaration
+    
+    * NEWS: Document this change.
+    * src/symtab.c (symbol_redeclaration, semantic_type_redeclaration,
+    user_token_number_redeclaration, default_tagged_destructor_set,
+    default_tagless_destructor_set, default_tagged_printer_set,
+    default_tagless_printer_set): Use complain_at_indent to
+    output with increased indentation level.
+    * tests/input.at: Apply this change.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 24d96dd3ebb49d003c29904fc5152ee5ec220e86
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Wed Sep 26 11:49:18 2012 +0200
+
+    errors: indent "result type clash" error context
+    
+    This used to be the format of the error report:
+    
+      input.y:6.5-10: result type clash on merge function 'merge': [...]
+      input.y:2.4-9: previous declaration
+    
+    In order to distinguish the actual error from the context provided, we
+    rather this new output:
+    
+      input.y:6.5-10: result type clash on merge function 'merge': [...]
+      input.y:2.4-9:     previous declaration
+    
+    Another patch will introduce an "error: " prefix to all non-indented
+    lines, giving yet better readability to the reports.
+    
+    * src/complain.h (SUB_INDENT): Move to here.
+    * src/reader.c (record_merge_function_type): Use complain_at_indent to
+    output with increased indentation level.
+    * src/scan-code.l (SUB_INDENT): Remove from here.
+    * tests/glr-regression.at: Apply this change.
+    
+    Signed-off-by: Akim Demaille <akim@lrde.epita.fr>
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 41511178a71ebaf81bde7ffc682c575537af45cb
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Sep 21 05:04:43 2012 +0200
+
+    new Werror report format fixed in a test
+    
+    * tests/input.at : replaced [-Wyacc] with [-Werror=yacc]
+    
+    todo: fix the other failed test of the suite, tests/conflicts.at:1554
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit fd01e1d05ea3e627033d148b5400b99a18ac7ba3
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Fri Sep 21 05:00:32 2012 +0200
+
+    made previous commit less hairy
+    
+    * src/getargs.c : here
+
+\end{verbatim}
+\line(1,0){250}
+\begin{verbatim}
+commit 981c53e257f1974854edc4f6ad0e88c7f18e2bea
+Author: Theophile Ranquet <ranquet@lrde.epita.fr>
+Date:   Thu Sep 20 12:21:28 2012 +0200
+
+    introduced a GCC-like -Werror=type
+    
+    * src/complain.h : errors_flag variable
+    * src/complain.c : actual stuff happens here
+    * src/conflits.c : differentiated SR and RR conflicts
+    * src/getargs.c : flags_argmatch recognizes the new -Werror format
+
+\end{verbatim}

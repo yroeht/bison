@@ -488,13 +488,171 @@ input.y:13.11-21: error: %define variable 'parse.error' redefined
 
   Le lecteur vraiment attentif, lui, aura remarqué le dernier message, qui lui
   commence différemment des autres: ni par \textit{error: }, ni par
-  \textit{warning: }. Il s'agit d'un information de contexte.
+  \textit{warning: }. Il s'agit d'une information de contexte.
 
   \subsubsection{Informations de contexte, et préfixage}
 
+  Les compilateurs fournissent souvent à l'utilisateur des informations
+  supplémentaires concernant les erreurs, pour aider l'utilisateur. Voici un
+  exemple avec gcc-4.7\footnote{%
+  http://gcc.gnu.org/wiki/ClangDiagnosticsComparison}:
+
+  \begin{verbatim}
+  deduce.cc: In function 'void g()':
+  deduce.cc:6:10: error: no matching function for call to 'f(A&)'
+  deduce.cc:6:10: note: candidate is:
+  deduce.cc:1:24: note: template<class T> void f(typename T::type)
+  deduce.cc:1:24: note:   template argument deduction/substitution failed:
+  deduce.cc: In substitution of 'template<class T> void f(typename T::type)
+  [with T = A]':
+  deduce.cc:6:10:   required from here
+  deduce.cc:1:24: error: no type named 'type' in 'struct A'
+  \end{verbatim}
+
+  Il y a trois type de messages dans cet affichage qui ne sont pas des erreurs,
+  mais qui sont simplement des indications supplémentaires.
+
+  \begin{itemize}
+    \item Le premier, \og \textit{In function `void g()'} \fg permet de
+      localiser l'erreur d'une façon plus significative pour l'utilisateur. Il
+      n'y a pas vraiment de situation dans Bison où l'on aurait matière à
+      préciser quelque chose de genre.
+    \item Le deuxième, \og \textit{deduce.cc:1:24: note: template<class T> void
+      f(typename T::type)} \fg ce sont les messages qui commencent par
+      \textit{note}, et qui sont des précisions complémentaires, souvent des
+      indices quant à des façons de résoudre le problème. Là encore, Bison n'a
+      pas grand chose de très intéressant à ajouter, les erreurs elles-mêmes
+      étant généralement plutôt explicites.
+    \item Enfin, la ligne qui va nous intéresser est celle qui lit \og
+      \textit{deduce.cc:6:10:   required from here}\fg. Le message qui précède
+      fait référence à plusieurs \textit{location}, or il est d'usage de donner
+      celles-ci avec ce format très particulier \texttt{fichier:ligne:colonne}
+      en début de ligne, il est donc naturel de donner les \textit{location}
+      supplémentaires via des messages additionnels. Le corps de ces messages
+      est indenté par rapport aux précédents.
+  \end{itemize}
+
+  Dans Bison, le cas des erreurs faisant référence à un bout du code situé en
+  amont est fréquent. C'est par exemple le cas des variables (re)définies avec
+  \texttt{\%define}, ou des tokens dont le numéro est en conflit, comme ici:
+
+  \begin{verbatim}
+r.y:10.10-22: error: user token number 112 redeclaration for HEX_1
+r.y:9.8-16:       previous declaration for DECIMAL_1
+  \end{verbatim}
+
+  Ce second message est indenté, dans l'esprit de la remarque précédente, pour
+  mettre en évidence la nature contextuelle de l'information.
+
+  Cette indentation est un produit de mon travail. Auparavant, une routine
+  existait pour afficher un message indenté: il s'agit de
+  \texttt{complain\_at}.  Cette routine ne servait malheureusement que pour
+  certains messages, celui ci-dessus par exemple utilisait la simple procédure
+  \texttt{complain}, et n'était aucunement indentée. Voici un exemple des
+  lègères corrections qui furent nécessaire à la bonne mise en forme de ces
+  messages\footnote{commit cbaea01, Wed Sep 26 11:49:19 2012}:
+
+  \begin{verbatim}
+ static void
+ semantic_type_redeclaration (semantic_type *s, const char *what, location first,
+                              location second)
+ {
+-  complain_at (second, _("%s redeclaration for <%s>"), what, s->tag);
+-  complain_at (first, _("previous declaration"));
++  unsigned i = 0;
++  complain_at_indent (second, &i, _("%s redeclaration for <%s>"), what, s->tag);
++  i += SUB_INDENT;
++  complain_at_indent (first, &i, _("previous declaration"));
+ }
+  \end{verbatim}
+
+  Le lecteur assidu aura noté la présence d'une fonction \og \texttt{\_} \fg,
+  qui était également présente dans le précédent extrait de code. Il s'agit en
+  fait d'un \textit{wrapper} autour de la fonction de traduction\footnote{%
+  http://translationproject.org/html/welcome.html} \texttt{gettext}, définit
+  comme suit:
+
+  \begin{verbatim}
+  src/system.h: # define \_(Msgid)  gettext (Msgid)
+  \end{verbatim}
+
+  Comme les messages sont traduit selon une collection de motifs,, il faut bien
+  faire attention à ne pas les découper n'importe comment, sinon on rend le
+  travail des traducteurs difficile. A propos des traductions délicates, voici
+  un exemple de message étrangement traduit:
+
+  \begin{verbatim}
+  $ LC_ALL=en_US.utf8 bison -Wdeprecated t.y
+  t.y:5.1: error: rule given for a, which is a token
+  $ LC_ALL=fr_FR.utf8 bison -Wdeprecated t.y
+  t.y:5.1: erreur: la règle pour a, qui est un terminal
+  \end{verbatim}
+
+  Pour en revenir à notre exemple, on peut s'intéresser à l'implémentation de
+  cette fonction \texttt{complain\_at}. Comme on peut le voir, on appelle aussi
+  cette fonction pour la partie non-indentée du message. En fait, on initialise
+  un entier à zéro, et on le passe à notre fonction par référence afin qu'elle
+  soit modifiée. Lorsque cette valeur est nulle, la fonction se comporte comme
+  la simple \texttt{complain}, au détail près qu'elle modifie cette valeur pour
+  y stocker la colonne courante du début du message. Lors du second appel, la
+  valeur n'est plus nulle, et \texttt{complain\_at} a un nouveau comportement:
+  elle affiche le corps du message  à la colonne correspondant à la valeur
+  stockée dans la variable. L'incrément manuel de cette valeur entre les deux
+  appels correspond donc au changement de niveau d'indentation. Cette interface
+  peu sembler un peu compliquée au premier abord: on aurait pu se contenter
+  d'ajouter un Booléen indiquant le corps du message était à indenter ou non.
+  Ce que l'on gagne avec cette méthode est la gestion des niveaux d'indentation
+  imbriqués, au cas où un jour où en aurait l'utilité.
+
+  Une faiblesse de cette approche (qui aurait également été présente dans la
+  version plus simple que je viens de suggérer) est que l'on part du postulat
+  que la partie gauche du second message (la \textit{location}) aura la même
+  taille que celle du premier message. C'est généralement vrai, la différence
+  potentielle se limitant généralement à quelques colonnes, et généralement
+  dans le sens négatif (c'est à dire que la seconde est plus courte que la
+  première, conséquence directe du fait que ce second message fait à priori
+  référence à une déclaration précédente, et donc avec un numéro de ligne et/ou
+  colonne inférieur --donc à potentiellement moins de chiffres), mais dans le
+  cas contraire, la différence empièterait sur l'indentation. Exemple adapté du
+  précédent:
+
+  \begin{verbatim}
+r.y:1.1-2: error: user token number 112 redeclaration for HEX_1
+r.y:1000.18-26:previous declaration for DECIMAL_1
+  \end{verbatim}
+
+  Notez que le \textit{previous:} est à la même position relativement au
+  \textit{error:}, mais que du fait du changement de taille de la
+  \textit{location} l'indentation est maintenant absente.
+
+  Ce cas ne devrait jamais se produire (la seule situation plausible étant non
+  pas une différence dans les numéros de ligne mais de colonne, or on imagine
+  difficilement un scénario raisonnable à mille colonnes), mais il existe une
+  façon de le gérer: il faudrait utiliser un \textit{buffer} pour stocker les
+  messages, en y insérant des marqueurs là où on souhaite changer le niveau
+  d'indentation, et ensuite effectuer une deuxième passe pour effectuer les
+  insertions de blancs.
+
+  Enfin, dernier point d'intérêt sur ce sujet: le préfixe des erreurs. En
+  effet, le lecteur a très certainement constaté que nos messages d'erreurs
+  commencent par \textit{error:} tandis que les avertissement, eux, commencent
+  par \textit{warning:}. C'est explicite, et ça semble très naturel. Pourtant,
+  ce sont des additions récentes: Victor a préfixé les avertissements, et c'est
+  moi même qui ai pris la responsabilité de préfixer les erreurs.
+
+  \subsubsection{\textit{warnings as errors}}
+
+  \subsubsection{La testsuite}
+
   \subsection{Visualisation graphique}
+  \subsubsection{Affichage des réductions}
+  \subsubsection{Adaptation à la production via XML}
 
   \subsection{Squelettes}
+  \subsubsection{Introduction d'une nouvelle forme de pureté}
+  \subsubsection{Modifications mineures de glr.cc}
+  \subsubsection{Changements de lalr1.cc}
+  \subsubsection{Réécriture des symboles}
 
   \cleardoublepage
   \section{Conclusion}

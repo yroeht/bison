@@ -423,7 +423,7 @@ index 8e48148..95edacc 100644
   souci de concision, je n'ai gardé qu'une seul telle ligne ci-dessus, mais il
   y en avait trois dans ce fichier. J'ai déplacé la reconnaissance de ces
   motifs un cran plus bas, dans le \textit{scanner}-même (le plus tôt, le
-  mieux c'est), où neuf autre directives dépréciées se situaient, et qui elles
+  mieux c'est), où neuf autres directives dépréciées se situaient, et qui elles
   n'étaient même pas marquées comme telles. Ces directives sont maintenant
   regroupées dans un paragraphe, et utilisent tous une même macro, pour
   faciliter le travail des futurs mainteneurs.
@@ -641,6 +641,178 @@ r.y:1000.18-26:previous declaration for DECIMAL_1
   moi même qui ai pris la responsabilité de préfixer les erreurs.
 
   \subsubsection{\textit{warnings as errors}}
+
+
+  Une fonctionnalité remarquable de GCC est d'activer le traitement des
+  avertissements en erreurs pour certaines catégories. Par exemple, avec
+  l'option \texttt{-Werror=unused-argument}, les arguments d'une fonction qui
+  ne sont pas utilisés par celle-ci sont traités comme des erreurs.
+
+  Maintenant que Bison dispose de catégories de d'avertissements, il était
+  devenu aisé d'implémenter ce comportement, et ce fut en fait la première
+  tâche qui m'avait été assignée (bien que j'ai été un peu distrait en cours de
+  route par d'autres considérations d'ergonomie sur les erreurs, détaillées
+  précédemment).
+
+  L'option \texttt{-Werror}, permettant de promouvoir la totalité des
+  avertissements en erreurs, existait déjà. En fait, c'était un hack: cette
+  option active une fausse catégorie \textit{error} d'avertissements qui sert,
+  dans la routine de génération des avertissements et erreurs, à promouvoir
+  ceux-ci en ces dernières lorsqu'elle est activée. Ceci n'offre aucune
+  flexibilité, c'est donc une impasse. Il a fallu repenser la façon de faire.
+
+  Une grande contrainte dans l'ajout du support d'une nouvelle option dans la
+  ligne de commande est que l'on veut au maximum s'intégrer dans les fonctions
+  de reconnaissance d'arguments actuelles. En l'occurrence, Bison dispose de
+  routines génériques et assez élégantes pour reconnaitre des consructions de
+  la forme \texttt{-Wno-deprecated,other,no-yacc -{}-report=state,solved} pour
+  factoriser \texttt{-Wno-deprecated, -Wother -Wno-yacc -{}-report=state
+  -{}-report=solved}. On note au passage le support des variantes \texttt{no-}
+  de chaque catégorie, qui se fait sans la moindre duplication de code.
+
+  Voici un extrait de la fonction \texttt{flags\_argmatch} telle qu'elle
+  existait à mon arrivée:
+
+  \begin{verbatim}
+      args = strtok (args, ",");
+      while (args)
+        {
+          int no = strncmp (args, "no-", 3) == 0 ? 3 : 0;
+          int value = XARGMATCH (option, args + no, keys, values);
+
+          /* operations sur warn_flags ici */
+  \end{verbatim}
+
+  Selon la valeur de \texttt{no}, le traitement sur la variable globale
+  \texttt{warn\_flags} stockant (sous forme de bits) les \textit{flags} activés
+  est différent: il peut s'agit d'une mise d'un bit à 1, ou à 0.
+
+  J'ai décidé de m'inspirer de cette façon de faire. J'ai introduit une
+  nouvelle globale, un véritable miroir de \texttt{warn\_flags}, que j'ai nommé
+  \texttt{error\_flags}, et qui stocke de la même façon l'information \og est
+  ce que cet avertissement est à traiter en erreur? \fg. Du coup, l'unique
+  différence entre les façons de traiter \texttt{-W[no-]category} et
+  \texttt{-W[no-]error=category} est la variable à modifier: dans un cas, on
+  veut modifier la reconnaissance d'une catégorie, dans l'autre cas on veut
+  activer son passage en erreur.
+
+  Le résultat se voit dans ces quelques lignes\footnote{%
+  commit 20964c3, Mon Oct 1 15:01:03 2012}:
+
+  \begin{verbatim}
+    for (args = strtok (args, ","); args; args = strtok (NULL, ","))
+      {
+        size_t no = STRPREFIX_LIT ("no-", args) ? 3 : 0;
+        size_t err = STRPREFIX_LIT ("error", args + no) ? 5 : 0;
+
+        flag_argmatch (option, keys,
+                       values, all, err ? &errors_flag : flags,
+                       args, no, err);
+      }
+  \end{verbatim}
+
+  Ce bout de code constitue en fait le corps de la nouvelle fonction
+  \texttt{flags\_argmatch}. Les opérations sur les variables globales ont été
+  déplacées dans une nouvelle fonction, pour une meilleur segmentation du code.
+
+  Voici ces fameuses opérations, avec des explications pas à pas:
+
+  \begin{itemize}
+    \item Première partie de l'alternative (\texttt{-W[no-]category}): ces
+      opérations font de simples opérations bits à bits: un masque
+      (\texttt{\&=$\sim$}) dans le cas du \texttt{no-}, afin de
+      désactiver le bit courant tout en préservant l'état des autres bits; un
+      OU (\texttt{|=}) dans le cas normal, pour mettre le bit en question à un.
+
+
+  \begin{verbatim}
+    if (value)
+      {
+        if (no)
+          *flags &= ~value;
+        else
+          {
+  \end{verbatim}
+
+    \item Il y a une action en plus à effectuer dans le
+      cas où on fait du \texttt{error=}. En effet, par choix (cohérent avec
+      celui de GCC), on veut que \texttt{-Werror=category} ne fasse pas
+      qu'activer la promotion de cette catégorie en erreur, mais également
+      qu'il active les \textit{warnings} de cette catégorie. Sinon,
+      l'utilisateur se retrouve à devoir spécifier deux fois ce nom de
+      catégorie: une fois pour le \texttt{-W}, et une fois pour le
+      \texttt{-Werror=}. Ainsi, il faut travailler sur les deux variables en
+      même temps.
+
+  \begin{verbatim}
+            if (err)
+              warnings_flag |= value;
+            *flags |= value;
+          }
+      }
+  \end{verbatim}
+
+    \item Deuxième partie de l'alternative (\texttt{-W[no-]none}): cette valeur
+      est spéciale: plutôt que signifier la modification d'une catégorie
+      précise, elle affecte au contraire toutes les autres (et éventuellement
+      elle-même, cette catégorie n'ayant aucune utilité en soi pour le reste
+      des évènements): c'est à dire que lorsqu'on \textit{set} \texttt{none},
+      en fait ce qu'on veut c'est \textit{reset} tout le reste, d'où le code
+      qui reprend le cas "usuel", mais inversé. Notons que la catégorie
+      \texttt{all} est gérée encore différemment: c'est une catégorie un peu
+      comme les autres, sauf que sa valeur dans l'énumération C des catégories
+      (qui sont des bits: 1, 2, 4, 8, etc.) est \texttt{$\sim$all}, c'est à
+      dire une valeur qui correspond "magiquement" à l'union de toutes les
+      autres valeurs possibles de l'énumération.
+
+\begin{verbatim}
+    else
+      {
+        if (no ? !err : err)
+          *flags |= all;
+        else
+          *flags &= ~all;
+      }
+  \end{verbatim}
+
+
+    \item Le mystérieux ternaire code le comportement suivant: de même que
+      \texttt{-Wno-none} signifie \texttt{-Wall},
+      \texttt{-Wno-error=none}\footnote{%
+        Le lecteur qui a du mal à s'y retrouver peut imaginer ceci: on précise
+        que, pour aucun avertissement, il ne faut pas promouvoir ceux-ci en
+        erreur; c'est à dire qu'on donne une précision qui ne s'applique à
+      rien, et qui n'a donc aucune importance.}, signifie
+      \texttt{-Werror=all}\footnote{Il faut bien comprendre que le "error=" ne
+        change pour ainsi dire rien, si ce n'est la variable courante: on peut
+        donc "simplifier" ce terme de l'option, et le résultat devient
+      immédiat, puisqu'on vient de rappeler que no-none est équivalent à all.}
+      ce qui est faux. L'usage de \texttt{-Wno-error=category} n'activant pas
+      implicitement le
+      \texttt{-Werror} des autres catégories, il n'y a aucune raison pour que
+      le \texttt{-Wno-error=none} le fasse.
+    \item Les constructions fantaisistes à la \texttt{-Wno-error=no-category}
+      sont impossibles, de par le fonctionnement du \textit{wrapper}
+      \texttt{flags\_argmatch}.
+  \end{itemize}
+
+
+  Résultat final:
+
+
+  \begin{verbatim}
+  $ bison -Werror=deprecated
+  input.yy:2.9-15: error: deprecated directive: ‘%define variant’, use ‘%define
+  api.value.type variant’ [-Werror=deprecated]
+  input.yy:3.4-5: warning: empty character literal [-Wother]
+  \end{verbatim}
+
+  \subsubsection{\textit{caret diagnostics}}
+
+  Une caractéristique très appréciée de Clang par la communauté est sa façon de
+  rapporter les erreurs, en adjoignant à chacune une ligne du code source
+  fautif correspondant, en soulignant l'endroit de l'erreur. C'est ce qu'on
+  appelle des \textit{caret diagnostics}, ou encore des \textit{caret errors}.
 
   \subsubsection{La testsuite}
 

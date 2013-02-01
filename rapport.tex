@@ -628,10 +628,11 @@ r.y:1000.18-26:previous declaration for DECIMAL_1
   Ce cas ne devrait jamais se produire (la seule situation plausible étant non
   pas une différence dans les numéros de ligne mais de colonne, or on imagine
   difficilement un scénario raisonnable à mille colonnes), mais il existe une
-  façon de le gérer: il faudrait utiliser un \textit{buffer} pour stocker les
-  messages, en y insérant des marqueurs là où on souhaite changer le niveau
-  d'indentation, et ensuite effectuer une deuxième passe pour effectuer les
-  insertions de blancs.
+  façon de le gérer\footnote{Déjà évoquée sur la mailing-liste:
+  http://lists.gnu.org/archive/html/bison-patches/2009-09/msg00086.html}: il
+  faudrait utiliser un \textit{buffer} pour stocker les messages, en y insérant
+  des marqueurs là où on souhaite changer le niveau d'indentation, et ensuite
+  effectuer une deuxième passe pour effectuer les insertions de blancs.
 
   Enfin, dernier point d'intérêt sur ce sujet: le préfixe des erreurs. En
   effet, le lecteur a très certainement constaté que nos messages d'erreurs
@@ -765,7 +766,7 @@ r.y:1000.18-26:previous declaration for DECIMAL_1
       dire une valeur qui correspond "magiquement" à l'union de toutes les
       autres valeurs possibles de l'énumération.
 
-\begin{verbatim}
+  \begin{verbatim}
     else
       {
         if (no ? !err : err)
@@ -813,6 +814,53 @@ r.y:1000.18-26:previous declaration for DECIMAL_1
   rapporter les erreurs, en adjoignant à chacune une ligne du code source
   fautif correspondant, en soulignant l'endroit de l'erreur. C'est ce qu'on
   appelle des \textit{caret diagnostics}, ou encore des \textit{caret errors}.
+
+  Ils sont introduits dans gcc-4.8 également. Ca ressemble à ceci\footnote{%
+  http://gcc.gnu.org/wiki/ClangDiagnosticsComparison}:
+
+  \begin{verbatim}
+$ gcc-4.8 -fsyntax-only t.c
+
+t.c: In function 'f':
+t.c:6:11: error: invalid operands to binary / (have '__m128' and 'const int *')
+   myvec[1]/P;
+           ^
+$ clang-3.1 -fsyntax-only t.c
+
+t.c:6:11: error: can't convert between vector values of different size ('__m128'
+and 'int const *')
+  myvec[1]/P;
+  ~~~~~~~~^~
+  \end{verbatim}
+
+  Bison ne dispose pas actuellement d'assez d'informations pour un affichage
+  aussi évolué que celui de Clang, mais nos \textit{location} sont tout à fait
+  suffisantes pour imiter le comportement de GCC\@. En fait, comme l'exemple le
+  montre, GCC se contente souvent de montrer la colonne de début du lieux
+  intéressant, tandis que dans Bison nous avons des informations un peu plus
+  riches: on garde trace de la colonne (et de la ligne) de début, mais aussi de
+  fin. Par exemple, dans l'exemple suivant, on voit des \textit{location} d'une
+  largeur de quatre colonnes.
+
+  La question s'est posée de savoir comment optimiser la routine d'affichage de
+  ces \textit{carets}:
+  \begin{verbatim}
+$ bison -fcaret input.y
+
+input.y:10.13-17: error: %destructor redeclaration for foo
+ %destructor {baz} "foo"
+             ^^^^^
+input.y:5.13-17:      previous declaration
+ %destructor {bar} foo
+             ^^^^^
+\end{verbatim}
+
+  On voit que nous avons fait le choix de souligner l'intégralité du lieux, et
+  pas juste la première colonne. On aurait pu vouloir tenter une imitation de
+  Clang, et utiliser \verb|^~~~|, mais comme on aurait jamais pu
+  mettre l'accent sur autre chose que le premier caractère, l'intérêt n'était
+  pas flagrant.
+
 
   \subsubsection{La testsuite}
 

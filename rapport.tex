@@ -25,12 +25,15 @@
 }
 
 \begin{document}
+  \pagenumbering{roman}
   \include{title}
   \cleardoublepage % Dans le cas du recto verso, ajoute une page blanche si besoin
   \tableofcontents % Table des matières
   \sloppy          % Justification moins stricte : des mots ne dépasseront pas des paragraphes
   \cleardoublepage
 
+  \pagenumbering{arabic}
+  \setcounter{page}{1}
   \section*{Introduction} % Pas de numérotation
   \addcontentsline{toc}{section}{Introduction} % Ajout dans la table des matières
 
@@ -81,17 +84,141 @@
   \section{Présentation du laboratoire}
   \subsection{Présentation générale}
 
-  Réunissant docteurs et doctorants en informatique, mathématiques ou
-  traitement du signal, le LRDE, Laboratoire de Recherche et Développement de
-  l'EPITA, est au carrefour de la recherche, du développement et de
-  l'enseignement. Les thèmes de recherche sont le calcul scientifique générique
-  et performant (ou comment concilier généralité et vitesse) et les modèles
-  probabilistes (ou comment attaquer les problèmes tels que la reconnaissance
-  des formes, l'authentification de la voix, la conformité approchée etc.).
+  Le LRDE est un laboratoire de recherche sous tutelle de l'École Pour
+  l'Informatique et les Techniques Avancées (EPITA). Il est composé de 8
+  chercheurs, 2 administratifs, 3 thésards et 6 étudiants-chercheurs fin 2010.
+  Son financement est couvert à 90\% par l'EPITA, le reste venant de contrats
+  industriels et de projets académiques.  Appartenant à une école privée, le LRDE
+  est une exception dans un monde où la recherche académique scientifique est
+  quasi-exclusivement du ressort d'organismes publics.
 
-  Les résultats sont ensuite présentés dans des conférences internationales ou
-  des revues scientifiques - plus de 100 communications en 12 ans.\footnote{%
-  http://www.epita.fr/recherche-laboratoire-recherche-developpement-epita.aspx}
+  Historique Le LRDE a été créé en 1998 à l'initiative de Joël Courtois,
+  directeur de l'EPITA, qui désirait équiper l'école d’un véritable laboratoire
+  académique, tant pour attirer des enseignants de qualité que pour participer à
+  la reconnaissance de l'école par ses pairs. En même temps le laboratoire
+  permettrait aux meilleurs élèves de l'école de s'initier au monde de la
+  recherche en participant à des projets de recherche.
+
+  En 2005, sous l'impulsion du Conseil Scientifique tout juste crée, la
+  nécessité est apparue de structurer le laboratoire autour de thématiques de
+  recherche afin de permettre au laboratoire de percer dans le monde académique
+  et industriel. La définition de cette thématique a été difficile à trouver.
+  Le point commun le plus visible était, et l'est toujours, la programmation
+  générique et performante. Il s’agit clairement de la marque de fabrique du
+  laboratoire que l'on retrouve dans différents projets du laboratoire et a
+  donné lieu à` une dizaine de publication. Aujourd'hui le séminaire du
+  laboratoire porte sur cet aspect, mais ce type de programmation est un outil
+  au service de projets de recherche qui sont les réelles activités principales
+  des chercheurs. Parmi ces activités le traitement d'images était déjà la
+  thématique la plus importante du laboratoire mais noyée parmi les autres.
+  Aussi après un long processus de réflexion, le LRDE a retenu deux thématiques
+  : Reconnaissance des formes, et Automates et vérification.
+
+  \subsection{Les projets}
+
+  Le LRDE a trois projets phares, trois bibliothèques génériques et
+  performantes écrites en C++, toutes sous licence libre. Ces bibliothèques
+  font partie intégrante de notre re- cherche et peuvent être utilisées dans la
+  réalisation de projets et de prestations. Actuelle- ment seule Olena, la
+  bibliothèque la plus ancienne du laboratoire et la plus avancée, est utilisée
+  dans le cadre de projets et a permis d’obtenir des contrats industriels.
+
+  \subsubsection{Olena – http://olena.lrde.epita.fr/}
+
+  Olena est une plate-forme de traitement d’images générique et performante. Le
+  but de cette bibliothèque est de permettre une écriture unique d’algorithmes
+  sachant que les entrées de ces algorithmes peuvent être de différente nature.
+  Ainsi les entrées possibles sont des images 1D (signaux), 2D (images
+  classiques), 3D (volumes), ou des graphes et leurs généralisations (complexes
+  cellulaires). De plus, les valeurs stockées dans ces images sont de types
+  variés : booléens pour les images binaires, des niveaux de gris avec
+  différents encodages, des flottants ou autres. La force d’Olena est de
+  préserver la nature abstraite des algorithmes sans pour autant devoir
+  sacrifier les performances.
+
+  \subsubsection{Vaucanson – http://vaucanson.lrde.epita.fr/}
+
+  On peut décomposer Vaucanson en trois gros morceaux :
+  \begin{enumerate}
+    \item Une bibliothèque générique, dans laquelle sont définis
+      \begin{enumerate}
+        \item différents types de représentation d’automates (graphes ou tables
+          de hachage) et d'expressions rationnelles
+        \item différents types de monoïdes et semi-anneaux
+        \item différents algorithmes qui les manipulent
+      \end{enumerate}
+    \item Une interface en ligne de commande, appelée TAF-Kit, qui permet
+      d’appeler les fonctionnalités principales de la bibliothèque sans devoir
+      écrire de C++. Du fait de l'approche générique employée dans la
+      bibliothèque, TAF-Kit doit être instanciée pour un type particulier
+      (c’est-à-dire un choix de représentation d’automate, monoïde, et semi-
+      anneau). Une douzaine de telles instances sont construites pour des types
+      prédéfinis.
+    \item Une interface graphique dont le développement a été repris par
+      l'équipe du Pr. Hsu-Chun Yen à Taïwan.
+  \end{enumerate}
+
+  Cette bibliothèque est développée selon un paradigme de programmation
+  générique permettant:
+  \begin{itemize}
+    \item d'écrire les algorithmes une seule fois, indépendamment de la
+      structure de données utilisée pour représenter les automates ou les
+      expressions rationnelles, et indépendamment du monoïde et du semi-anneau
+      utilisé par cet objet.
+    \item de ne pas payer le prix de cette abstraction pour être (en théorie)
+      aussi rapide à l'exécution qu'un algorithme
+  \end{itemize}
+
+  \subsubsection{Spot – http://spot.lip6.fr/}
+  Spot est une bibliothèque de \textit{model checking}. C’est-à-dire qu'elle
+  offre des algorithmes utiles à la construction d'un \textit{model checker}
+  travaillant suivant une approche par automate.  Par rapport aux autres
+  outils, nous nous distinguons par l'utilisation d'automates généralisés avec
+  conditions d'acceptation sur les transitions, alors que la plupart de la
+  recherche est faite sur des automates non-généralisés avec conditions
+  d’acceptation sur les états.  Les deux formalismes sont aussi expressifs,
+  mais le premier est beaucoup plus concis et permet de réaliser les opérations
+  de base de l'approche automate de façon plus efficace:
+
+  \begin{enumerate}
+    \item la traduction donne des automates plus compacts, donc le produit est
+      (généralement) aussi plus petits
+    \item l'utilisation de condition d’acceptation généralisées, permet
+      notamment de représenter très facilement des hypothèses d'équité faible
+    \item la recherche de circuit acceptant dans un automate généralisé peut se
+      faire aussi rapidement que dans un automate non-généralisés.
+  \end{enumerate}
+
+  \subsection{Effectifs}
+
+  L'effectif actuel comprend les chercheurs suivants :
+  \begin{adjustwidth}{-2cm}{-2cm}
+    \begin{center}
+      \begin{tabular}{| l | c | l | l | l |}
+        \hline
+        Nome & Né en & Formation & Statut & Arrivée \\
+        \hline
+        Ala-Eddine Ben-Salem & 1980 & M2 SLCP (INP Toulouse) & Doctorant &
+        2010 \\
+        Ana Stefania Calarasanu & & M2 Paris VI & Doctorante & 2012 \\
+        Edwin Caralinet & 1990 & EPITA / MVA ENS Cachan & Doctorant & 2012 \\
+        Etienne Renault & & M2 Paris VI & Doctorant & 2011 \\
+        Yongchao Xu & 1986 & M2 Paris XI & Doctorant & 2010 \\
+        \hline
+        Guillaume Lazarra & 1985 & EPITA & Ing.\ de recherche & 2008 \\
+        \hline
+        Réda Dehak  & 1975 & Dr ENST & MdC & 2002 \\
+        Akim Demaille & 1970 & X / Dr ENST & MdC & 1999 \\
+        Alexandre Duret-Lutz & 1978 & EPITA / Dr Paris VI & MdC & 2007 \\
+        Jonathan Fabrizio & 1978 & Dr Paris VI & MdC & 2009 \\
+        Thierry Géraud & 1969 & ENST / Dr ENST & MdC & 1998 \\
+        Roland Levillain & 1980 & EPITA / M2 SIRF (ENST) & MdC & 2005 \\
+        Olivier Ricou & 1966 & Dr Paris VI & MdE - Directeur & 2002 \\
+        Didier Verna & 1970 & ENST / Dr ENST & MdC & 2000 \\
+        \hline
+      \end{tabular}
+    \end{center}
+  \end{adjustwidth}
 
   \subsection{La majeure CSI}
 
@@ -107,9 +234,116 @@
   grandes entreprises ou de start-up innovantes.\footnote{%
   http://www.epita.fr/cursus-cycle-ingenieur-majeures.aspx}
 
-  \subsection{Les lieux}
+  Voici le sujet du travail des sept étudiants CSI de la promotion 2013 qui
+  étaient à mes côtes pendant ce stage\footnote{%
+  http://lrde.epita.fr/cgi-bin/twiki/view/Publications/Seminar-2013-01-16}:
 
-  \subsection{Les projets}
+  \subsubsection*{Spot: Réduction par simulation pour les TGBA (Thomas Badie)}
+
+  L'approche par automates du model checking s'appuie traditionnellement sur
+  des Automates de Büchi (BA) qu'on souhaite les plus petits possible. Spot,
+  bibliothèque de model checking, utilise principalement des TGBA qui
+  généralisent les BA\@. Nous avons déjà présenté une méthode de réduction par
+  simulation (dite directe). Cette technique a permis de produire des automates
+  plus petits que dans les précédentes versions.  La simulation consiste à
+  fusionner les états ayant le même suffixe infini. Nous montrons que nous
+  pouvons aussi fusionner ceux ayant le même préfixe infini (c'est la
+  cosimulation). On peut répéter la simulation et la cosimulation pour créer la
+  simulation itérée. Cette méthode est incluse dans Spot 1.0 et est une grande
+  amélioration de la simulation.  On expérimente aussi une méthode qui consiste
+  à modifier certaines conditions d'acceptations (appellées sans importances).
+  Puisque celles qui sont sur les transitions entre composantes fortement
+  connexes n'ont pas d'influence sur le langage, on peut les modifier pour
+  aider la simulation.
+
+  \subsubsection*{Spot: Méthodes de réduction par ordre partiel adaptatives
+  (Pierre Parutto)}
+
+  Le model checking explicite de systèmes concurrents souffre d'une croissance
+  exponentielle du nombre d'états représentant un système.  Les méthodes de
+  réduction par ordre partiel sont un ensemble de méthodes permettant de
+  combattre ce problème. Celles-ci permettent d'ignorer les états redondants
+  lors de la génération de l'espace d'états. Parmi elles, nous avons choisi les
+  algorithmes two phase et ample set comme base pour nos investigations.
+  Ceux-ci ont été implémentés dans Spot, la bibliothèque C++ de model checking
+  développée au LRDE, en utilisant l'interface DiVine. En se basant sur ces
+  méthodes et sur le fait que les algorithmes dans Spot sont calculés à la
+  volée, nous avons défini une nouvelle classe de méthodes appelées méthodes de
+  réduction par ordre partiel adaptatives. L'idée est de se baser sur l'état
+  courant de l'automate de la formule et non sur la formule tout entière. Les
+  résultats obtenus sur notre suite de tests montrent que cette méthode donne
+  de meilleurs résultats que les
+  méthodes d'ordre partiel classiques.
+
+  \subsubsection*{Speaker ID: Spherical Discriminant Analysis (Victor Lenoir)}
+
+  Le rôle de la vérification de locuteur est de vérifier l'identité présumée
+  d'un segment de parole. Actuellement, les meilleures performances sont
+  obtenues par un mapping de chaque segment de parole d'un locuteur vers un
+  vecteur appelé I-vector. Le score de la vérification de locuteur est calculé
+  par une distance cosine entre ces deux vecteurs représentant chacun un
+  locuteur. Ce rapport décrit une technique de réduction de dimension appelée
+  Spherical Discriminant Analysis (SDA). Les objectifs de cette projection sont
+  de maximiser la distance cosinus entre deux locuteurs différents et de
+  minimiser la distance cosinus entre deux même locuteurs; il a été montré que
+  le sous-espace de la SDA, qui est plus approprié pour la distance cosinus que
+  la Linear Discriminant Analysis (LDA), obtient de meilleures performances en
+  reconnaissance faciale. Nous allons comparer les performances obtenues par la
+  SDA avec celles obtenues par la LDA.
+
+  \subsubsection*{Climb: Parallélisation de Climb (Laurent Senta)}
+
+  Climb est une bibliothèque de traitement d'image générique développée en
+  Common Lisp. Elle fournit une couche de généricité bas niveau utilisée pour
+  définir de nouveaux algorithmes de traitement d'image. Il est aussi possible
+  de créer des chaînes de traitements soit en utilisant un "Domain Specific
+  Language" déclaratif ou bien à l'aide d'une interface graphique. Afin
+  d'améliorer les performances de la bibliothèque, ces différents niveaux
+  peuvent être parallélisés. Nous décrirons les différents aspects de ce
+  processus de parallélisation. Pour chaque niveau, nous détaillons
+  l'implémentation des traitements parallèles, leurs impacts sur
+  l'utilisabilité de la bibliothèque ainsi que les gains de performance
+  obtenus.
+
+  \subsubsection*{Vaucanson: FSMXML pour Vaucanson 2.0 (David Moreira)}
+
+  Vaucanson est une bibliothèque de manipulation d'automates et de
+  transducteurs. La version 2.0 est aujourd'hui en cours de développement et le
+  design a été revu pour avoir des parties statiques et dynamiques. Dans
+  Vaucanson 1.4, les entrées/sorties utilisent intensivement le format XML
+  spécifié par le groupe de Vaucanson, FSMXML\@. Mes travaux consistent à
+  développer et rafraîchir des spécifications du format présent dans Vaucanson
+  1.4. Cette mise à jour nous permet la sauvegarde et la lecture d'automates
+  aux Weight Sets particuliers tels que des expressions rationnelles ou même
+  des automates pondérés.
+
+  \subsubsection*{Olena: Calcul du flux optique dans des séquences avec des
+  parties manquantes (Sylvain Lobry)}
+
+  Calculer le flux optique peut être un premier pas vers l'inpainting vidéo.
+  Pour cette application, nous devons manipuler des séquences avec des zones
+  manquantes, celles à inpainter. Le flux optique peut être calculé de manière
+  locale ou globale. Les méthodes globales ont généralement de meilleurs
+  résultats. Dans le cas de séquences avec des zones manquantes, les méthodes
+  globales ne peuvent pas être utilisées de manière directe à cause du manque
+  d'informations dans ces régions. Nous présentons une méthode combinant des
+  algorithmes locaux et globaux afin de calculer le flux optique dans ce type
+  de séquences ce qui nous permet d'inpainter efficacement et simplement des
+  vidéos.
+
+  \subsubsection*{Olena: Variational image inpainting by combination of features
+  (Coddy Levi)}
+
+  L'inpainting consiste à réparer des parties d'une image de façon visuellement
+  plausible. Une catégorie de méthodes répondant à ce problème est basée sur
+  des équations aux dérivées partielles (EDP). Cette approche consiste à
+  propager itérativement des informations géométriques et d'intensités à
+  l'intérieur des régions à réparer. Cependant l'élaboration de tels modèles
+  demande une compréhension théorique du processus de diffusion souvent
+  difficile à obtenir. Basé sur le papier de Risheng Liu traitant d'une
+  approche ascendante à la composition de l'EDP par combinaison d'invariants
+  simples, nous proposons une mise en oeuvre optimisée que nous comparons à
+  l'existant.
 
   \cleardoublepage
 
@@ -120,42 +354,6 @@
   \subsection{Présentation de bison}
 
   \subsection{Age et volumétrie du projet}
-  %http://www.ohloh.net/p/bison/commits/summary
-  %http://www.ohloh.net/p/bison/analyses/latest/languages_summary has had 5,161
-  %commits made by 33 contributors representing 33,410 lines of code
-
-  %Mature, well-established codebase The first lines of source code were added to
-  %GNU Bison in 1987. Projects with recent activity, and a code base more than
-  %five years old are likely solving vital problems and delivering consistent
-  %value, and may be organized to reward sustained effort by an engaged team of
-  %contributors.
-
-  %Such a lengthy source control history in conjunction with recent activity may
-  %indicate that this code base and community are important enough to attract
-  %long-term commitment, and may also indicate a mature and relatively bug-free
-  %code base.
-
-  %Increasing year-over-year development activity Over the last twelve months, GNU
-  %Bison	 has seen a substantial increase in activity. This may be a sign that
-  %interest in this project is rising, and that the open source community has
-  %embraced this project.
-
-  %Large, active development team Over the past twelve months, 8 developers
-  %contributed to GNU Bison. This project has a relatively large team, in the top
-  %10% of all project teams on Ohloh.  
-
-  %For this measurement, Ohloh considers only recent changes to the code. Over the
-  %entire history of the project, 32 developers have contributed.
-
-  %Average number of code comments GNU Bison is written mostly in C.
-
-  %Across all C projects on Ohloh, 19% of all source code lines are comments.
-
-  %This holds true for GNU Bison as well. It contains the same ratio of comment
-  %lines to code lines as the majority of C projects in Ohloh.
-
-  %A high number of comments might indicate that the code is well-documented and
-  %organized, and could be a sign of a helpful and disciplined development team.
 
   \cleardoublepage
 

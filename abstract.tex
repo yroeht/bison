@@ -74,14 +74,14 @@ Théophile Ranquet
 
   This report will give a brief but comprehensive overview of my five months
   internship at EPITA's Research and Development Laboratory (LRDE).  My work
-  was on Bison, which is part of the GNU project.  Therefore, this report will
-  not contain informations pertaining to the LRDE's work \textit{per se}.
+  was on Bison, which is a part of the GNU project.  Therefore, this report
+  will not contain information pertaining to the LRDE's work \textit{per se}.
 
   This abstract will start with a reminder of who and what stands behind the
   entities I worked with (LRDE, GNU). It will then proceed to give a rough
   outline of what the software I worked on (Bison) is, the state in which it
   was when I arrived, and what my contributions to it have been. Finally, it
-  well give an appreciation of the work that was done, and recap the skills I
+  will give an appreciation of the work that was done, and recap the skills I
   have developed.
 
   \section*{Presentation of the laboratory}
@@ -150,7 +150,7 @@ Théophile Ranquet
   The first task that I was assigned was to continue the work that a previous
   intern (Victor Santet) had started. Historically, Bison had errors and
   warnings, and that was all. Victor introduced the distinction between
-  warning classes, \textit{à la} GCC\@. He also introduced the means to treat
+  warning categories, \textit{à la} GCC\@. He also introduced the means to treat
   warnings as errors, with a \texttt{-Werror} option. My improvements include:
   \begin{itemize}
     \item introducing a much more specific \texttt{-Werror=CATEGORY} option
@@ -164,7 +164,7 @@ Théophile Ranquet
   eye-candy) and more useful: only the \textit{shifts} were represented, the
   \textit{reductions} were not.
 
-  All of these previous tasks were C (the last one had a part of it in XSLT
+  All of these tasks till now were C (the last one had a part of it in XSLT
   though). This was the first half of the internship.
 
   The second half was all about the skeletons of Bison: C and C++ in a M4-heavy

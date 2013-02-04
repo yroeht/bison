@@ -12,6 +12,10 @@
 \usepackage{changepage} %for changing margins in appendices
 \usepackage{gantt}
 
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\pagestyle{fancy}
+
 \newcommand{\reporttitle}{Rapport de stage}     % Titre
 \newcommand{\reportauthor}{Théophile \textsc{Ranquet}} % Auteur
 \newcommand{\reportsubject}{Stage de fin de Tronc Commun} % Sujet
@@ -345,9 +349,23 @@
   simples, nous proposons une mise en oeuvre optimisée que nous comparons à
   l'existant.
 
+  \subsection{Positionnement du stage au sein du laboratoire}
+
+  Bison est un projet GNU, ce n'est pas un projet du laboratoire. Cependant,
+  son mainteneur est Akim Demaille, membre permanent du LRDE\@. De part la
+  nature du projet Bison\footnote{voir section suivante}, ce stage était très
+  proche de la Théorie des Langages, qui n'est pas étrangère au LRDE non plus.
+
+  Enfin, un des projets du LRDE est le compilateur Tiger\footnote{%
+  http://www.lrde.epita.fr/~akim/ccmp/tiger.html}, qui utilise Bison, et
+  une partie de mon travail visait très spécifiquement des fonctionnalités
+  développées avant tout pour Tiger (car non publiées).
+
   \cleardoublepage
 
   \section{Le projet GNU Bison}
+
+GNU Bison est l'implémentation de l'analyseur syntaxique yacc par le projet GNU.
 
   \subsection{Analyseurs syntaxiques}
 
@@ -685,8 +703,8 @@ input.y:13.11-21: error: %define variable 'parse.error' redefined
   de l'y trouver alors que là elle n'existe juste pas).
 
   Le lecteur vraiment attentif, lui, aura remarqué le dernier message, qui lui
-  commence différemment des autres: ni par \textit{error: }, ni par
-  \textit{warning: }. Il s'agit d'une information de contexte.
+  commence différemment des autres: ni par \textit{error}, ni par
+  \textit{warning}. Il s'agit d'une information de contexte.
 
   \subsubsection{Informations de contexte, et préfixage}
 
@@ -1060,7 +1078,7 @@ input.y:5.13-17:      previous declaration
   pas flagrant.
 
 
-  \subsubsection{La testsuite}
+  \subsubsection{La suite de tests}
 
   \subsection{Visualisation graphique}
   \subsubsection{Affichage des réductions}

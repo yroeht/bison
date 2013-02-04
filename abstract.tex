@@ -1,0 +1,280 @@
+%\documentclass[a4paper,11pt,final]{article}
+% Pour une impression recto verso, utilisez plutôt ce documentclass :
+\documentclass[a4paper,11pt,final]{article}
+
+\usepackage[english,francais]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[pdftex]{graphicx}
+\usepackage{setspace}
+\usepackage{hyperref}
+\usepackage[french]{varioref}
+\usepackage{changepage} %for changing margins in appendices
+\usepackage{gantt}
+\usepackage{fancyhdr}
+
+\newcommand{\reporttitle}{Internship Report Abstract}
+\newcommand{\reportauthor}{Théophile \textsc{Ranquet}}
+\newcommand{\reportsubject}{Fourth year internship}
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
+\setlength{\parskip}{1ex} % Espace entre les paragraphes
+\newcommand{\ts}{\textsuperscript}
+
+\hypersetup{pdftitle={\reporttitle},
+            pdfauthor={\reportauthor},
+            pdfsubject={\reportsubject},
+            pdfkeywords={rapport} {vos} {mots} {clés}
+}
+
+\begin{document}
+Théophile Ranquet
+  id: 64201
+\begin{center}
+  \begin{minipage}[t]{0.48\textwidth}
+    \begin{flushleft}
+      \includegraphics [width=50mm]{images/logo-epita.png} \\[0.5cm]
+      \begin{spacing}{1.5}
+      \end{spacing}
+    \end{flushleft}
+  \end{minipage}
+  \begin{minipage}[t]{0.48\textwidth}
+    \begin{flushright}
+      \includegraphics [width=35mm]{images/logo-lrde.png} \\[0.5cm]
+    \end{flushright}
+  \end{minipage} \\[0.5cm]
+
+    \textsc{\Large \reportsubject}\\[0.5cm]
+    \large{September 7\ts{th}, 2012 - January 31\ts{st}, 2013}\\[0.1cm]
+    \large{EPITA's Research and Development Laboratory (LRDE)}\\[0.3cm]
+    \HRule \\[0.4cm]
+    {\huge \bfseries \reporttitle}\\[00.4cm]
+    \HRule \\[0.2cm]
+
+    \large{Contribution to the development of GNU Bison}\\[0.2cm]
+
+    \begin{minipage}[t]{0.3\textwidth}
+      \begin{flushleft} \large
+        \emph{Author :}\\
+        \reportauthor\\
+      \end{flushleft}
+    \end{minipage}
+    \begin{minipage}[t]{0.6\textwidth}
+      \begin{flushright} \large
+        \emph{Supervisor :} \\
+        Akim \textsc{Demaille} (maintainer)\\
+      \end{flushright}
+    \end{minipage}
+  \end{center}
+
+  \sloppy
+  \pagenumbering{arabic}
+  \setcounter{page}{1}
+  \section*{Introduction}
+  \addcontentsline{toc}{section}{Introduction}
+
+  This report will give a brief but comprehensive overview of my five months
+  internship at EPITA's Research and Development Laboratory (LRDE).  My work
+  was on Bison, which is part of the GNU project.  Therefore, this report will
+  not contain informations pertaining to the LRDE's work \textit{per se}.
+
+  This abstract will start with a reminder of who and what stands behind the
+  entities I worked with (LRDE, GNU). It will then proceed to give a rough
+  outline of what the software I worked on (Bison) is, the state in which it
+  was when I arrived, and what my contributions to it have been. Finally, it
+  well give an appreciation of the work that was done, and recap the skills I
+  have developed.
+
+  \section*{Presentation of the laboratory}
+
+  The EPITA Research and Development Laboratory was created at the
+  beginning of year 1998 at EPITA, a private university in computer science
+  located in the south of Paris, France. The different skills of LRDE's members
+  cover various fields of computer science, including (but not limited to):
+
+  \begin{itemize}
+    \item Image and Signal Processing
+    \item Compilation
+    \item Automata Theory
+    \item Metaprogramming
+  \end{itemize}
+
+  The LRDE's permanent staff is composed of eight computer researchers, several
+  of them being involved in the free software community (XEmacs, autotools,
+  Bison, and others).
+
+  \section*{Presentation of the project: GNU Bison}
+
+  The GNU Project is a free software, mass collaboration project,
+  announced on 27 September 1983, by Richard Stallman at MIT\@. Its aim is to
+  give computer users freedom and control in their use of their computers and
+  computing devices, by collaboratively developing and providing software that
+  is based on the following freedom rights: users are free to run the software,
+  share it (copy, distribute), study it and modify it.
+
+  GNU bison, commonly known as Bison, is a parser generator that is part of the
+  GNU Project. Bison reads a specification of a context-free language, warns
+  about any parsing ambiguities, and generates a parser (either in C, C++, or
+  Java) which reads sequences of tokens and decides whether the sequence
+  conforms to the syntax specified by the grammar. Bison by default generates
+  LALR parsers but can also create GLR parsers.
+
+  The internship was supervised by Akim Demaille. Akim is the current
+  maintainer of Bison, alongside Joel E. Denny, and Paul Eggert. He is also a
+  permanent member of the LRDE, and a teacher at EPITA, for Language Theory,
+  Compiler Construction, and Formal Logic.
+
+  The activity from other contributors to GNU Bison was pretty low during my
+  internship, so the "team" I was a part of was basically just Akim and I.
+
+  \section*{The existing state of affairs}
+
+  Bison started in 1986 as the GNU implementation of the old YACC (developed by
+  Stephen C. Johnson at AT\&T Corporation for the Unix operating system in
+  1970), by Richard M. Stallman.
+
+  In a Nutshell, GNU Bison has had 5,201 commits made by 33 contributors over
+  26 years, representing 33,650 lines of code. The version number at my arrival
+  was 2.6.2, so the project was overall already very mature. There were no
+  longstanding bugs to fix, just the perspective of a few potentially nice
+  feature additions
+
+  Bison itself is written in C90 (70\%); the skeletons for the generated
+  parsers are processed using GNU M4 macros, and contain (depending on the
+  skeleton) C, C++, or Java; the rest of the project is autoconf script (m4)
+  for the testsuite; there are also minor bits of XSLT for generating nice
+  graphical representations of the parser automatons, and Perl for benchmarking
+  tools, for example.
+
+  \section*{Description and timeline of the internship}
+
+  The first task that I was assigned was to continue the work that a previous
+  intern (Victor Santet) had started. Historically, Bison had errors and
+  warnings, and that was all. Victor introduced the distinction between
+  warning classes, \textit{à la} GCC\@. He also introduced the means to treat
+  warnings as errors, with a \texttt{-Werror} option. My improvements include:
+  \begin{itemize}
+    \item introducing a much more specific \texttt{-Werror=CATEGORY} option
+    \item rehauling other aspects of error reports, such as indentation and
+      prefixing
+    \item introducing \textit{caret diagnostics}
+  \end{itemize}
+
+  The second task was improving the graphical representation of the generated
+  \textit{shift/reduce} automatons, to make it more pleasant for the user (more
+  eye-candy) and more useful: only the \textit{shifts} were represented, the
+  \textit{reductions} were not.
+
+  All of these previous tasks were C (the last one had a part of it in XSLT
+  though). This was the first half of the internship.
+
+  The second half was all about the skeletons of Bison: C and C++ in a M4-heavy
+  environment. I started by implementing a longstanding feature request, and I
+  then moved on to fixing a few things which led me to changing the
+  representations of the parser's internal symbols, which was a delicate object
+  orientated design problem.
+
+  The timeline of the internship is summarized in the following Gantt chart and
+  table:
+
+  \begin{adjustwidth}{-4cm}{-2cm}
+  \begin{gantt}[xunitlength=0.7cm,fontsize=\small,titlefontsize=\small,drawledgerline=true]{14}{20}
+    \begin{ganttitle}
+      \titleelement{2012}{16}
+      \titleelement{2013}{4}
+    \end{ganttitle}
+    \begin{ganttitle}
+      \numtitle{9}{1}{12}{4}
+      \numtitle{1}{1}{1}{4}
+    \end{ganttitle}
+    \begin{ganttitle}
+      \numtitle{1}{7}{22}{1}
+      \numtitle{1}{7}{22}{1}
+      \numtitle{1}{7}{22}{1}
+      \numtitle{1}{7}{22}{1}
+      \numtitle{1}{7}{22}{1}
+    \end{ganttitle}
+    \ganttbar{[1]}{1}{4}
+    \ganttbarcon{[2]}{10}{2}
+    \ganttbar{[3]}{5}{2}
+    \ganttbarcon{[4]}{7}{4}
+    \ganttbar{[5]}{10}{2}
+    \ganttmilestonecon{version 2.7}{14}
+    \ganttbar{[6]}{13}{2}
+    \ganttbar{[7]}{15}{2}
+    \ganttbarcon{[8]}{17}{3}
+  \end{gantt}
+  \end{adjustwidth}
+
+  \begin{adjustwidth}{-2cm}{-2cm}
+    \begin{center}
+      \begin{tabular}{| c | l | l | l |}
+        \hline
+        Index & Period & Task & Technology \\
+        \hline
+        1 & from 9/8 to 10/8 & implement warnings as errors & C \\
+        2 & from 11/15 to 12/1 & implement caret diagnostics & C \\
+        3 & from 10/8 to 10/22 & show reductions on graph visualization file &
+        C \\
+        4 & from 10/22 to 11/22 & replicate [3] on xml output & XSLT \\
+        5 & from 10/15 to 12/1 & implement a new parser purity level & M4 \\
+        6 & from 12/8 to 12/22 & hunt some leaks & C \\
+        7 & from 12/22 to 1/8 & minor changer to skeletons & M4 / C++ \\
+        8 & from 1/8 to 1/31 & change the symbols implementation & C++ \\
+        \hline
+      \end{tabular}
+    \end{center}
+  \end{adjustwidth}
+
+  \section*{Global appreciation}
+
+  The internship was most pleasant. Akim taught me many things, including a lot
+  of good practices in the world of GNU (coding standards, Git commit messages,
+  workflow, etc.) which, I am sure, will come in handy whatever I work on next.
+  The other contributors were very kind as well, and answered my questions
+  anytime I asked them. All of our discussions is publicly available on the
+  project's mailing-list archives. Indeed, contributing to free software
+  implies working with people from all over the globe, and thus the
+  conversations are done by email.
+
+  My workplace, the LRDE, is great to spend some time with bright minds, and I
+  would definitely recommend it. I was seated rather close to Akim, so he was
+  constantly looking over me, making sure I was doing good progress, but also
+  just chatting and exchanging thoughts. Everyone in the laboratory is on
+  first-name basis.
+
+  \section*{Skills acquired}
+
+  \begin{itemize}
+    \item problem solving: ability to do much with limited tools, ability to
+      introduce a new feature without overhauling the existing features
+    \item extensive knowledge of the Git versioning system
+    \item good practice of commits using the Git versioning system for
+      collaborative work.
+    \item better knowledge of coding standards (especially GNU)
+    \item practice of technical English (mailing-lists, documentation, etc.)
+    \item improved knowledge of C programming (\textit{obstacks}, etc.)
+    \item improved knowledge of Graphviz DOT language (for graphs)
+    \item learned XSL Transformation language
+    \item learned GNU M4 macro language
+    \item practiced maintaining an actual testsuite
+  \end{itemize}
+
+  \section*{Conclusion}
+
+  This internship was a great opportunity for me. I have a vivid interest for
+  fundamental computer science aspects such as Language Theory, and compiler
+  implementation. 
+
+  I am very supportive of free software, and I like C, C++, and UNIX
+  programming in general. These five months I spent working in that world
+  confirmed my desire to continue in that direction.
+
+  There were three huge positive points to the internship. Firstly, I got to
+  finally contribute to the GNU project. Secondly, I got to learn M4, and
+  improve my C, which are awesome languages to work with. And lastly, most
+  important, I got to work with fabulous people.
+
+  The only negative point was the under-average salary, but I didn't care much
+  for it.
+\end{document}
+

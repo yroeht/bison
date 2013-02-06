@@ -38,28 +38,28 @@
   \section*{Introduction} % Pas de numérotation
   \addcontentsline{toc}{section}{Introduction} % Ajout dans la table des matières
 
-  Le stage de 2ème année du cycle d'ingénieur de l'EPITA, aussi appelé stage
-  de fin de Tronc Commun, est une expérience critique dans le parcours de
-  chacun. On pourrait en dire autant de tout stage, mais celui-ci est le
-  dernier avant le stage de fin d'études, qui est un peu différent des autres
-  en cela qu'il constitue une sorte de « période d'essai » par les entreprises
-  et débouche dans 90\% des cas (chiffres officiels de l'école en 2010) sur une
-  embauche (CDI, etc.). Ce stage de fin de tronc commun est donc de fait la
-  dernière occasion de découvrir un potentiel métier avant la sortie de
-  l'école, et il n'est pas rare que les étudiants choisissent de passer ces
-  cinq mois dans un environnement qui n'est pas forcément celui auquel ils se
-  destinaient pour leur avenir proche à la fin de leurs études, dans le but de
-  s'assurer qu'ils ont fait le bon choix, ou éventuellement de voir si un coup
-  de cœur ne les ferait pas changer d'avis.
+  Le stage de 2ème année du cycle d'ingénieur de l'EPITA, aussi appelé stage de
+  fin de Tronc Commun, est une expérience critique dans le parcours de chacun.
+  On pourrait en dire autant de tout stage, mais celui-ci est le dernier avant
+  le stage de fin d'études, qui est un peu différent des autres en cela qu'il
+  constitue une sorte de « période d'essai » par les entreprises et débouche
+  dans 90\% des cas (chiffres officiels de l'école en 2010) sur une embauche
+  (CDI, etc.). Ce stage de fin de tronc commun est donc de fait la dernière
+  occasion de découvrir un potentiel métier avant la sortie de l'école, et il
+  n'est pas rare que les étudiants choisissent de passer ces cinq mois dans un
+  environnement qui n'est pas forcément celui auquel ils se destinaient pour
+  leur avenir proche à la fin de leurs études, dans le but de s'assurer qu'ils
+  ont fait le bon choix, ou éventuellement de voir si un coup de cœur ne les
+  ferait pas changer d'avis.
 
   Ce stage se place avant les deux semestres de spécialisation des étudiants de
   l'EPITA\@. En ce qui me concerne, j'envisageais avant ce stage de m'orienter
   vers la majeure « Système, Réseau et Sécurité » (SRS). Du coup, il me fallait
   trouver un stage qui me plaise, mais qui me donne une expérience que je
   n'aurai pas forcément l'occasion de reproduire dans un an. Alliant mes
-  intérêts pour la programmation Unix en C et C++ d'un côté, et pour
-  la théorie des langages et la compilation de l'autre, c'est donc avec un
-  naturel relatif que m'est venu l'idée de ce stage.
+  intérêts pour la programmation Unix en C et C++ d'un côté, et pour la théorie
+  des langages et la compilation de l'autre, c'est donc avec un naturel relatif
+  que m'est venu l'idée de ce stage.
 
   Le sujet de ce stage est « contribution aux développements de GNU Bison et
   Tiger », et le lieu est le Laboratoire de Recherche et de Développement de
@@ -1951,16 +1951,137 @@ Cleanup: popping nterm e ()
   location, et on le fait dériver d'un paramètre, \texttt{by\_type} ou
   \texttt{by\_state}.
 
+  Une fuite de mémoire liée à l'introduction de ces changements attira alors
+  notre attention.
+
+  \subsubsection{Résolution de la fuite de l'api.token.constructor}
+
+  Traditionnellement, l'analyseur lexical \texttt{yylex} retourne un entier,
+  qui correspond à la valeur du token reconnu (NUM, PUNCT, etc.). La valeur
+  sémantique associée, elle, est stockée dans l'argument \texttt{yylval}, de la
+  façon suivante:
+
+  \begin{verbatim}
+  // update yylloc
+  yylval->build< std::string > (yytext);
+  return parser::token::TOK_TEXT;
+  \end{verbatim}
+
+  Les versions récentes de Bison introduisent la directive \texttt{\%define
+  api.token.constructor} qui change l'interface de \texttt{yylex}, qui renvoie
+  désormais un \texttt{symbol\_type}:
+
+  \begin{verbatim}
+  return parser::make_TOK_TEXT (yytext, /* location here */);
+  \end{verbatim}
+
+  Une bug vicieux et silencieux s'était caché dans les fonctions
+  \texttt{make\_}, que voici:
+
+  \begin{verbatim}
+  parser::symbol_type
+  parser::make_TEXT (const ::std::string& v)
+  {
+    return symbol_type (token::TOK_TEXT, v);
+  }
+  \end{verbatim}
+
+  Le constructeur de \texttt{symbol\_type} ne prend pas de
+  \texttt{::std::string\&} en argument, mais un \texttt{const variant}.
+  Cependant, comme il y a un constructeur de \texttt{variant} qui prend un
+  \texttt{::std::string\&}, ceci construisait implicitement un variant
+  initialisé. Comme le variant passé en argument au constructeur de
+  \texttt{symbol\_type} est constant, il n'est pas libéré; ce constructeur
+  n'est normalement jamais appelé hors de notre contrôle, et doit
+  systématiquement être libéré explicitement, autrement que par le destructeur.
+  Le variant temporaire n'était donc jamais vidé, son contenu fuyait la
+  mémoire. Une première solution a été de rétablir une construction en deux
+  temps (sans variable temporaire):
+
+  \begin{verbatim}
+  symbol_type res (token::TOK_TEXT);
+  res.value.build< ::std::string&> (v);
+  return res;
+  \end{verbatim}
+
+  La solution retenue tente d'éviter tout reproduction de ce bug, en ajoutant
+  les constructeurs qui manquaient. Maintenant, les symboles s'auto-gèrent:
+  leur construction peut se paramétrer par une valeur sémantique directement
+  (non-wrappée par un variant).
+
+  Les constructeurs sont générés en M4. Voici la génération de leur définition
+  (leur déclaration est générée d'une façon très semblable):
+  \begin{verbatim}
+Dans basic_symbol:
+
+  // Implementation of basic_symbol constructor for each type.
+]b4_type_foreach([b4_basic_symbol_constructor_define])[
+
+En aval, parmis les macros m4:
+
+# b4_basic_symbol_constructor_define
+# ----------------------------------
+# Generate a constructor implementation for basic_symbol from given type.
+m4_define([b4_basic_symbol_constructor_define],
+[[
+  template <typename Base>
+  ]b4_parser_class_name[::basic_symbol<Base>::basic_symbol (]b4_join(
+          [typename Base::kind_type t],
+          b4_symbol_if([$1], [has_type], const b4_symbol([$1], [type])[ v]),
+          b4_locations_if([const location_type& l]))[)
+    : Base (t)
+    , value (]b4_symbol_if([$1], [has_type], [v])[)]b4_locations_if([
+    , location (l)])[
+  {}
+]])
+  \end{verbatim}
+
   \cleardoublepage
 
   \section{Conclusion}
 
+  Chaque modification apportée à Bison a pour moi été l'occasion d'acquérir de
+  nouvelles compétences et de nouveaux savoir-faire, qui m'ont permis d'aborder
+  des travaux de plus en plus intéressants.
+
+  Les deux premiers mois du stage ont été consacrés à du développement en C, un
+  langage qui m'étais déjà bien familier. Cependant, j'ai vite découvert que
+  mes connaissances de l'outil de gestion de versions Git étaient en fait
+  bien plus faibles que ce que je m'imaginais, et arriver sur un projet de
+  cette envergure a été une parfaite occasion pour me perfectionner.
+
+  Lorsque le travail sur l'affichage des réductions dans les graphes m'a été
+  proposé, Akim m'a demandé si le langage Dot m'était familier; c'était le cas.
+  Je pensais tout de même que j'aurais des difficultés sur cet aspect là de la
+  tâche -- loin de moi à l'époque l'idée que ce qui me donnerait tant de mail
+  serait l'algorithme qui se cachait derrière, et encore plus l'idée que je
+  bloquerais sur des détails d'implémentation de C! Et quelle ne fut pas
+  surprise lorsque vint le travail sur les fichiers XSL\ldots Oui, ce travail
+  sur les graphes fut difficile, mais c'est avec joie que je l'ai vu apprécié.
+
+  La seconde partie de ce stage a porté sur divers travaux sur les squelettes,
+  fichiers riches en GNU M4. Ce langage ne faisait pas du tout parti de ma
+  panoplie à mon arrivée, et il faut bien reconnaître qu'il est intimidant, à
+  sa manière. Cependant, les petites manipulations nécessaires sur la suite de
+  tests pendant la première partie du stage ont suffit à me donner confiance,
+  et à me donner de l'intérêt pour cet enchevêtrement de crochets et de
+  parenthèses.
+
+  En fin de compte, chaque phase du stage m'a permis de découvrir de nouvelles
+  choses, qui à chaque fois m'ont plus. Travailler sur GNU Bison est un
+  plaisir, ce projet a des facettes multiples, et toutes très intéressantes; et
+  travailler avec Akim Demaille est un plaisir aussi.
+
+
+
+
   \cleardoublepage
   \section{Annexes}
 
-  \subsection{git shortlog --author=ranquet}
+  \subsection{Liste des commits appliqués à Bison}
+  Voici la sortie de la commande \texttt{git shortlog --author=ranquet}
   \begin{adjustwidth}{-2cm}{-2cm}
-    %\include{commits}
+    \include{commits}
   \end{adjustwidth}
 
   \cleardoublepage

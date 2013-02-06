@@ -11,10 +11,7 @@
 \usepackage[french]{varioref}
 \usepackage{changepage} %for changing margins in appendices
 \usepackage{gantt}
-
-\usepackage{fancyhdr}
-\usepackage{lastpage}
-\pagestyle{fancy}
+\usepackage{float}
 
 \newcommand{\reporttitle}{Rapport de stage}     % Titre
 \newcommand{\reportauthor}{Théophile \textsc{Ranquet}} % Auteur
@@ -346,7 +343,7 @@
   demande une compréhension théorique du processus de diffusion souvent
   difficile à obtenir. Basé sur le papier de Risheng Liu traitant d'une
   approche ascendante à la composition de l'EDP par combinaison d'invariants
-  simples, nous proposons une mise en oeuvre optimisée que nous comparons à
+  simples, nous proposons une mise en œuvre optimisée que nous comparons à
   l'existant.
 
   \subsection{Positionnement du stage au sein du laboratoire}
@@ -365,14 +362,294 @@
 
   \section{Le projet GNU Bison}
 
-GNU Bison est l'implémentation de l'analyseur syntaxique yacc par le projet GNU.
+  GNU Bison est l'implémentation de l'analyseur syntaxique yacc par le projet
+  GNU.
+
+  \subsection{L'ancêtre YACC}
+
+  Le programme YACC est un générateur de parseurs développé par Stephen C.
+  Johnson pour UNIX en 1970, chez AT\&T Corporation. Ce nom est un acronyme
+  récursif pour \textit{Yet Another Compiler Compiler}.
+
+  Pour faire tourner les parseurs (analyseurs sémantiques) générés, il faut
+  faire appel à un analyseur lexical, souvent généré avec des outils tels Lex.
+  Le standard IEEE POSIX P1003\footnote{%
+  http://pubs.opengroup.org/onlinepubs/009695399/utilities/yacc.html} décrit
+  les fonctionnalités et requis pour ces deux programmes.
+
+  Lex est capable de traiter des langages de type 3 (réguliers), et yacc
+  fournit le code nécessaire à l'analyse de langages de type 2
+  (non-contextuels); les parseurs (les analyseurs sémantiques) générés sont
+  LALR.
 
   \subsection{Analyseurs syntaxiques}
 
+  L'entrée \textit{input} de tout programme informatique a une structure. En
+  fait, un programme peut être vu comme définissant un "langage d'entrée" qu'il
+  accepte. Un langage d'entrée peut être complexe, par exemple un langage de
+  programmation, ou simple, tel une simple séquence de nombre. Malheureusement,
+  les méthodes canoniques d'entrée/sortie utilisateur sont limitées, difficiles
+  d'utilisation, et souvent laxistes quant à la vérification de la validité de
+  l'entrée.\footnote{http://dinosaur.compilertools.net/yacc/index.html}
+
+  Yacc fournit un outil générique pour décrire l'entrée d'un programme.
+  L'utilisateur spécifie les structures de son entrée, avec le code à invoquer
+  pour chaque structure reconnue. Yacc transforme ces spécifications en une
+  routine qui gère tout le processus de lecture de l'entrée; il est
+  d'usage de déléguer toute l'interaction avec l'entrée à cette routine.
+
+  Cette routine produite par YACC appelle à une autre routine, fournie par
+  l'utilisateur, pour retourner le prochain élément atomique de l'entrée; on
+  parle de \textit{token} (lexème). Ainsi, l'utilisateur peut choisir le niveau
+  d'abstraction qu'il souhaite dans son \textit{input}: traiter les caractères
+  au plus bas niveau, un par un, ou alors avec des notions plus haut niveau:
+  mots, nombres, etc. Cette routine peut également gérer des idiomes, tels les
+  commentaires.
+
+  YACC est écrit en C portable, et la classe de spécifications acceptée est
+  très large: des grammaires LALR(1) désambigüisées.
+
+  En plus de l'écriture de compilateurs C, APL, Pascal, RATFOR, etc., YACC a
+  également utilisé pour des des langages moins conventionnels, par exemple un
+  deboggeur FORTRAN.
+
+  La grammaire est une collection de règles. Chaque règle décrit une structure
+  autorisée et la nomme. Par exemple, une règle pourrait être:
+
+  \begin{verbatim}
+  date : month_name day ',' year ;
+  \end{verbatim}
+
+  Ici, \texttt{date}, \texttt{month\_name}, \texttt{day}, et \texttt{year}
+  représentent des structures d'intérêt particulier dans l'entrée; on suppose
+  que \texttt{month\_name}, \texttt{day}, et \texttt{year} sont définis
+  ailleurs. La virgule ',' est entre guillements; ceci signifie que la virgule
+  apparait telle quelle dans l'entrée. Les deux points et le point virgule
+  ne sont là que pour ponctuer la règle elle-même et n'ont aucune valeur
+  vis-à-vis de l'entrée. Ainsi, avec les définitions qui vont bien, la règle
+  ci-dessus filtre (reconnait) l'entrée suivante:
+
+  \begin{verbatim}
+  July 4, 1776
+  \end{verbatim}
+
   \subsection{Présentation de bison}
+
+  Le projet GNU est un projet informatique dont les premiers développements ont
+  été réalisés en janvier 1984 par Richard Stallman pour développer le système
+  d'exploitation GNU\@. Le projet est maintenu par une communauté de hackers
+  organisée en sous-projets. Chaque brique du projet est un logiciel libre
+  utilisable de par sa nature dans des projets tiers, mais dont la finalité est
+  de s'inscrire dans une logique cohérente avec l'ensemble des sous-projets en
+  vue de la réalisation d'un système d’exploitation complet et entièrement
+  libre, et avec pour stratégie, l'utilisation de l'existant.
+
+  Le projet Bison a été initié en 1986 par Richard M. Stallman, qui souhaitait
+  développer une implémentation GNU de YACC\@. Il apporte comme nouveautés un
+  certain nombre de nouvelles directives, une nouvelle façon de typer les
+  productions des règles, le support de nouveaux langages (C++ et Java), ainsi
+  que la génération des parserus GLR.
+
+  Voici un exemple relativement typique de fichier que l'on pourrait vouloir
+  donner en entrée à Bison:
+
+  \begin{verbatim}
+%skeleton "lalr1.cc"
+%define variant
+%debug
+
+%token <int> ELEM
+%type < std::list<int> > exp
+%token TEOF 0
+
+%printer { yyo << $$; } <int>
+%printer
+    {
+      for (std::list<int>::const_iterator i = $$.begin (); i != $$.end (); ++i)
+        {
+          if (i != $$.begin ())
+            yyo << ", ";
+          yyo << *i;
+        }
+    } < std::list<int> >
+
+%code requires { #include <list> }
+%code { int yylex (yy::parser::semantic_type* yylval); }
+
+%%
+exp: /* empty */    { /* magic*/ }
+   | exp[li] ELEM { $li.push_front ($ELEM); $$ = $li; }
+%%
+
+void yy::parser::error (std::string const& msg)
+{
+  std::cerr << msg << std::endl;
+}
+  \end{verbatim}
+
+  Ce à quoi on décide par exemple de joindre notre fonction d'analyse lexicale
+  (elle pourrait aussi être générée par Flex, dans un autre fichier donc):
+
+  \begin{verbatim}
+int yylex (yy::parser::semantic_type* yylval)
+{
+  static int input = 0;
+  if (input++ == 10)
+    return yy::parser::token::TEOF;
+  else
+    {
+      yylval->build (input);
+      return yy::parser::token::ELEM;
+    }
+}
+  \end{verbatim}
+
+  Ainsi qu'un point d'entrée pour faire tourner tout ceci:
+
+  \begin{verbatim}
+int main ()
+{
+  yy::parser p;
+  p.set_debug_level (1);
+  p.parse ();
+}
+  \end{verbatim}
+
+  On distingue trois sections, séparées par des \og \%\% \fg:
+
+  \begin{enumerate}
+    \item Le prologue, qui contient des \textit{directives} Bison (qui
+      commencent toutes par \%), dans notre cas:
+      \begin{itemize}
+        \item \texttt{\%skeleton} choisit quel squelette de parseur on veut
+            utiliser. Ceci n'implique rien concernant le type de parseur
+            généré: par défault c'est du LALR, et utiliser le squelette
+            \texttt{glr.cc} génèrera un LALR dans un squelette LALR\@. Pour
+            générer un parseur GLR, il faut utiliser la directive
+            \texttt{\%glr-parser}. Ici, on génère simplement un parseur C++
+            LALR\@.
+        \item \texttt{\%define variant} est une nouveauté dans Bison, et
+            remplace l'ancien \texttt{\%union}. Cette directive permet
+            d'utiliser un variant en lien d'un union, ce qui a pour avantage
+            de permettre de stocker objets, ce qui n'est pas possible dans un
+            union en C++ (on ne peut y stocker que de la
+            \textit{plain old data}, POD). Ainsi on peut utiliser des
+            objets pour représenter la valeur sémantique des productions de
+            la grammaire, très agréable par exemple lorsque l'on construit
+            un \textit{arbre de syntaxe abstraite} (AST).
+        \item \texttt{\%type} et \texttt{\%token} définissent les terminaux
+            (\textit{tokens}) présents dans la grammaire. Une valeur leur est
+            associée, et c'est cette valeur qui est retournée par l'analyseur
+            lexical \textit{yylex} à chaque mot, et qui permet de savoir quel
+            type de token a été filtré.
+        \item \texttt{\%printer}, qui définit comment afficher les
+            différentes valeurs sémantiques des productions de la grammaire
+            dans les traces de debug.  Par exemple, l'affichage des listes
+            n'est pas immédiat, il est donc nécessaire de fournir la routine
+            nécessaire.
+        \item \texttt{\%code} définit le code à insérer avant le corps du
+            squelette du parser: typiquement les prototypes des fonctions
+            fournies par l'utilisateur.
+      \end{itemize}
+    \item La grammaire.
+    \item L'épilogue, qui contient les fonctions requises par les parseurs
+      générés, à savoir:
+      \begin{itemize}
+        \item L'analyseur lexical \texttt{yylex}.
+        \item La routine de traitement d'erreur \texttt{error}.
+      \end{itemize}
+  \end{enumerate}
 
   \subsection{Age et volumétrie du projet}
 
+  Globalement, GNU Bison c'est 5 201 commits réalisés par 33 contributeurs sur
+  une période de 26 ans pour un total de 49 968 lignes de code. Le numéro de
+  version à mon arrivée était 2.6.2, autrement dit le projet était déjà mature.
+  Il n'y avait de bugs de longue date à réparer, juste un certain nombre de
+  possibilités d'améliorations et d'ajout de \textit{features} intéressantes.
+
+  \begin{figure}[H]
+    \begin{center}
+      \begin{tabular}{| r | c | c |}
+        \hline
+        Lignes & Total & Pourcentage \\
+        \hline
+        code & 33 650 & 67.3\% \\
+        commentaire & 8 392 & 16.8\% \\
+        vide & 6 926 & 15.9\% \\
+        \hline
+      \end{tabular}
+      \caption{Parts des commentaires dans le code source}
+    \end{center}
+  \end{figure}
+
+  Bison est écrit en C90 (70\% du volume). Les parseur sont générés à partir de
+  squelettes, qui sont remplis avec des tables correspondant à la grammaire de
+  ce cas précis d'utilisation ainsi qu'avec les action données par
+  l'utilisateur. Ces squelettes sont écris dans le langage cible (donc C, C++,
+  et Java), mais articulé avec des macros GNU M4.
+
+  Il y a quelques templates XSLT qui sont fournis avec Bison afin de pouvoir
+  générer les sorties (texte, html, et graphviz) à partir d'un fichier XML.
+
+  La testsuite est écrite en M4 aussi. Enfin, il y a des outils de
+  developpement, par exemple les scripts de benchmarking, en Perl. Au total,
+  en comptant le Texinfo de la documentation, le Bison des parseurs internes et
+  le Lex des scanneurs internes de Bison, ce sont dix langages qui sont
+  représentés\footnote{données provenant de http://www.ohloh.net/p/bison/}.
+
+  \begin{figure}[H]
+    \begin{adjustwidth}{-2cm}{-2cm}
+      \begin{center}
+        \includegraphics[scale=0.55]{images/language-breakdown}
+        \caption{Parts des différents langages de programmation dans le projet}
+      \end{center}
+    \end{adjustwidth}
+  \end{figure}
+
+  Sur ces 12 derniers mois, il y a eu 891 commits (ce qui est 720 de plus que
+  l'année précédente, soit une augmentation de 421\%), de 8 contributeurs (un
+  de plus que l'an dernier). Voici un graphique qui donne un aperçu de
+  historique de l'activité sur le projet depuis sa création:
+
+  \begin{figure}[H]
+    \begin{adjustwidth}{-2cm}{-2cm}
+      \begin{center}
+        \includegraphics[scale=0.55]{images/commits-per-month}
+        \caption{Évolution des commits par mois depuis 1988}
+      \end{center}
+    \end{adjustwidth}
+  \end{figure}
+
+  On voit bien les débuts inactifs (jusqu'à 1993). En effet, le travail n'était
+  alors versionné que de façon très basique, avec RCS (Revision Control
+  System). En 1993, le travail collaboratif commence. Il y a un pic d'activité
+  en 2001, lorsqu'Akim et d'autres nouveaux contributeurs arrivent (notamment
+  des étudiants de l'EPITA), et apportent de gros changements à l'architecture
+  du projet: création d'un répertoire lib/ qui contient des implémentations
+  utiles au projet, d'une suite de tests, et surtout mise en place du backend
+  actuel en M4. Depuis ces années 2000, il y a entre 2 et 5 contributeurs
+  actifs chaque année (donc plus qu'avant 2002)
+
+  \begin{figure}[H]
+    \begin{adjustwidth}{-2cm}{-2cm}
+      \begin{center}
+        \includegraphics[scale=0.55]{images/line-count}
+        \caption{Évolution du nombre de lignes (de code, de commentaire, et
+          vides) depuis 1988.}
+      \end{center}
+    \end{adjustwidth}
+  \end{figure}
+
+  \begin{figure}[H]
+    \begin{adjustwidth}{-2cm}{-2cm}
+      \begin{center}
+        \includegraphics[scale=0.55]{images/contributors}
+        \caption{Part des contributions des différents mainteneurs dans le
+        projet actuel.}
+      \end{center}
+    \end{adjustwidth}
+  \end{figure}
   \cleardoublepage
 
   \section{Travail effectué}
@@ -386,7 +663,6 @@ GNU Bison est l'implémentation de l'analyseur syntaxique yacc par le projet GNU
   générés par Bison. J'ai donc commencé mon stage en continuant sur cette
   lancée, et ce pendant un mois. Cette tâche correspond à l'élément [1] dans le
   diagramme de Gantt fourni plus bas.
-
 
   La continuation a --là encore-- été guidé très largement par les suggestions
   de mon mentor.  Il y avait déjà une liste d'améliorations possibles maintenue
@@ -422,14 +698,12 @@ GNU Bison est l'implémentation de l'analyseur syntaxique yacc par le projet GNU
   Fort des connaissances acquises, je commençai alors à travailler sur les
   squelettes de Bison.
 
-  /* FIXME: wrapper, locations, \ldots glr.cc [8] */
-
-  J'implémentai alors quelques modifications au squelette LALR C++ ([9]) mais
-  je me suis heurté à ce qu'on pourrait appeler un mur: le schéma utilisé pour
-  représenter les symboles n'était pas du tout viable si on voulait envisager
-  des améliorations du genre de ce que je proposais (et qui, honnêtement,
-  paraissent maintenant bien mineures par rapport à l'avalanche de travail
-  engendré par ce qui a suivi). On a donc du ensuite retravailler le
+  J'implémentai alors quelques modifications aux squelettes C++ GLR ([8]) et
+  LALR ([9]) mais je me suis heurté à ce qu'on pourrait appeler un mur: le
+  schéma utilisé pour représenter les symboles n'était pas du tout viable si on
+  voulait envisager des améliorations du genre de ce que je proposais (et qui,
+  honnêtement, paraissent maintenant bien mineures par rapport à l'avalanche de
+  travail engendré par ce qui a suivi). On a donc du ensuite retravailler le
   fonctionnement des symboles ([10]).
 
   \begin{adjustwidth}{-4cm}{-2cm}
@@ -455,13 +729,14 @@ GNU Bison est l'implémentation de l'analyseur syntaxique yacc par le projet GNU
     \ganttbarcon{show reductions xslt [4]}{7}{4}
     \ganttbar{api.pure full [5]}{10}{2}
     \ganttmilestonecon{version 2.7 released}{14}
-    \ganttbar[pattern=north east lines, color=red]{epita coding-style [6]}{12}{2}
     \ganttbar{leak hunting [7]}{13}{2}
     \ganttbar{glr.cc [8]}{15}{1}
     \ganttbarcon{lalr1.cc [9]}{16}{1}
     \ganttbarcon{symbols [10]}{17}{3}
   \end{gantt}
   \end{adjustwidth}
+
+  \cleardoublepage
 
   \subsection{Erreurs et avertissements}
 
@@ -859,7 +1134,6 @@ r.y:1000.18-26:previous declaration for DECIMAL_1
 
   \subsubsection{\textit{warnings as errors}}
 
-
   Une fonctionnalité remarquable de GCC est d'activer le traitement des
   avertissements en erreurs pour certaines catégories. Par exemple, avec
   l'option \texttt{-Werror=unused-argument}, les arguments d'une fonction qui
@@ -1080,17 +1354,605 @@ input.y:5.13-17:      previous declaration
 
   \subsubsection{La suite de tests}
 
-  \subsection{Visualisation graphique}
-  \subsubsection{Affichage des réductions}
-  \subsubsection{Adaptation à la production via XML}
+  Pour chacun de ces tests, il a fallu maintenir la suite de tests, afin de
+  s'assurer de la non-régression du projet. La politique suivie est très
+  simple: tout ce qui est visible de l'utilisateur doit être testé. C'est donc
+  le cas pour les messages d'erreurs, sur lesquels nous avons travaillé.
 
-  \subsection{Squelettes}
-  \subsubsection{Introduction d'une nouvelle forme de pureté}
-  \subsubsection{Modifications mineures de glr.cc}
-  \subsubsection{Changements de lalr1.cc}
-  \subsubsection{Réécriture des symboles}
+  Afin d'être le plus efficace possible, certains tests sont exécutés plusieurs
+  fois: une fois avec le traitements des warnings en erreurs, et une fois sans.
+  Pour éviter toute duplication de code (ou plutôt, de sortie attendue), on ne
+  spécifie que la sortie attendue avec les warnings, c'est ensuite une macro de
+  la testsuite qui se charge de transformer cette sortie en l'équivalent avec
+  \texttt{--graph}. Par exemple, il s'agit d'adapter
+
+
+  \begin{verbatim}
+  input.yy:3.4-5: warning: empty character literal [-Wother]
+  \end{verbatim}
+
+  en
+
+  \begin{verbatim}
+  input.yy:3.4-5: error: empty character literal [-Werror=other]
+  \end{verbatim}
+
+  Les habitués auront reconnu là un cas d'application assez banal de
+  \texttt{sed}. Cepedandant, comme l'on se situe dans une macro M4 (la suite de
+  tests n'est composée que de ça), il faut prendre quelques complications en
+  compte. Du coup, la commande que l'on aurait voulu exécuter:
+
+  \begin{verbatim}
+  $PERL -pi -e 's{(.*): warning: (.*)\[-W(.*)\]$}
+                $1:error $2[-Werror=$3]}'             expout
+  \end{verbatim}
+
+  ne peut pas être utilisée telle quelle. En effet, en M4, \texttt{\$N} est
+  l'expansion de l'argument $n$ de la macro. Il faut donc \og l'échapper \fg
+  ainsi: \texttt{\$][N}. Et immédiatement, un deuxième problème survient, de
+  Perl lui-même cette fois ci: \texttt{\$N[]} est vu comme un
+  déréférencement de tableau, et non pas comme \og le motif $n$ suivi de
+  crochets\fg. Il faut donc échapper ces crochets. Enfin, le niveau
+  d'imbrication des crochets étant devenu problématique côté M4, il a fallu les
+  remplacer par les trigraphes associes, à savoir \texttt{@<:@} et \texttt{@:>}
+  pour \texttt{[} et \texttt{]} respectivement. On finit donc avec le
+  magnifique:
+
+  \begin{verbatim}
+  $PERL -pi -e 's{(.*): warning: (.*)\[-W(.*)\]$}
+                $1:error $][2\@<:@-Werror=$][3@:>@}'  expout
+  \end{verbatim}
+
+  La mise à jour du M4 n'a été qu'une succession de créations artistiques du
+  genre. Pour citer Akim, \textit{M4 \_is\_ sexy, et les crochets c'est
+  tellement plus beau que des parenthèses\ldots}
 
   \cleardoublepage
+
+  \subsection{Visualisation graphique}
+
+  Derrière les parseurs générés par Bison se cachent en fait des automates à
+  décalage et à réduction. Pour illustrer nos propos, prenons une grammaire
+  canonique (mais conflictuelle):
+
+  \begin{verbatim}
+%%
+exp: a | b
+a:
+b:
+  \end{verbatim}
+
+  Il y a un conflit \textit{reduce/reduce} (R/R), c'est à dire que pour un même état
+  l'automate peut réduire selon deux règles différentes: ici, lorsqu'on
+  reconnait le mot vide, on peut aussi bien réduire selon \texttt{a} que selon
+  \texttt{b}. L'automate n'a aucun moyen raisonable de choisir (ce qui aurait
+  pu être le cas en cas de présence de \textit{lookahead token (LAT)}, de mot de
+  regard en avant), il y a donc conflit. Notez le choix de ce type de conflit
+  pour l'exemple, et non pas d'un \textit{shift/réduce}: dans ce cas,
+  l'automate résoud lui-même le conflit en privilégiant le décalage, et la
+  réduction est donc écartée de l'automate (et ne serait pas visible sur le
+  graphe qui suit). En cas de conflit R/R, c'est la première réduction (dans
+  l'ordre de la grammaire) qui est choisie; la deuxième n'étant jamais utilisée
+  on la marque donc comme inutile.
+
+  Ces informations sont déjà disponibles sous un format textuel donc voici un
+  extrait:
+
+  \begin{verbatim}
+State 0
+
+    0 $accept: . exp $end
+    1 exp: . a
+    2    | . b
+    3 a: .  [$end]
+    4 b: .  [$end]
+
+    $end      reduce using rule 3 (a)
+    $end      [reduce using rule 4 (b)]
+    $default  reduce using rule 3 (a)
+
+    exp  go to state 1
+    a    go to state 2
+    b    go to state 3
+    \end{verbatim}
+
+    La réduction inutile est marquée entre crochets. Le nouvel affichage des
+    réductions est:
+
+  \begin{figure}[H]
+    \begin{adjustwidth}{-2cm}{-2cm}
+      \begin{center}
+        \includegraphics[scale=0.55]{images/badgraph}
+        \caption{Représentation de l'automate sous-jacent de la grammaire
+        input.y, Bison 2.7}
+      \end{center}
+    \end{adjustwidth}
+  \end{figure}
+
+  Afin de mieux apprécier mon travail, voici ce qui existait auparavant:
+
+  \begin{figure}[H]
+    \begin{adjustwidth}{-2cm}{-2cm}
+      \begin{center}
+        \includegraphics[scale=0.55]{images/old}
+        \caption{Représentation de l'automate sous-jacent de la grammaire
+        input.y, Bison 2.6}
+      \end{center}
+    \end{adjustwidth}
+  \end{figure}
+
+  Une première partie du travail a été l'embellissment via des choix plus
+  cohérents: bulles carrées, police monospace, précision de \texttt{State N} en
+  lieu d'un simple \texttt{N}.
+
+  Une deuxième partie du travail a été l'amélioration de l'affichage des règles
+  de grammaires relatives à chaque état: l'ancien affichage n'était pas
+  cohérent avec celui de la sortie texte, elle est maintenant identique.
+
+  Enfin, les réductions sont maintenant visibles.
+
+  \subsubsection{Affichage des réductions}
+
+  On aurait pu croire que la présence d'un affichage des réductions dans la
+  sortie texte, avec une marque pour les réductions rendues inutiles par un
+  conflit, et leur LAT associé, était un indicateur d'immédiateté de la tâche
+  que nous souhaitions: afficher les réductions "normales" en vert, avec leur
+  LAT comme étiquette (sauf pour les actions par défaut, par souci de
+  lisibilité); et les réductions désactivées par conflit non résolu par
+  l'utilisateur en rouge.
+
+  Malheureusement (pour les fainéants, \textit{heureusement} pour les
+  enthousiastes tels le jeune stagiaire que j'étais), cela n'a pas été si
+  facile. En effet, l'information \og réduction désactivée \fg, ainsi que
+  l'information \og il n'y a pas de LAT qui ne correspond pas à l'action par
+  défaut pour cette réduction \fg, n'est pas accessible facilement. Cela passe
+  par la construction d'une collection de données (un \textit{bitset}, en
+  l'occurrence).
+
+  L'extrait de sortie texte montre quelque chose de très désagréable: les
+  réductions sont traitées par LAT (ici \texttt{\$end}) d'abord, \textit{puis}
+  par règle de grammaire. Or, pour notre sortie Graphviz, on veut afficher un
+  arc par règle, mais avec tous les LAT associés à la règle: on veut effectuer
+  le traitement dans l'ordre inverse. Il a donc fallu comprendre l'algorithme,
+  et l'adapter à ce nouveau sens. Les détails n'intéresseront pas le lecteur,
+  mais nous en avons tiré une bonne connaissance de l'implémentation des
+  réductions.
+
+  Voici le code produit, qui construit les \textit{potentiels} arcs:
+
+  \begin{verbatim}
+
+  /* Two obstacks are needed: one for the enabled reductions, and one
+     for the disabled reductions, because in the end we want two
+     separate edges, even though in most cases only one will actually
+     be printed. */
+     (...)
+      /* Build the lookahead tokens lists, one for enabled transitions and one
+         for disabled transistions. */
+      if (default_reduction && default_reduction == reds->rules[j])
+        defaulted = true;
+      if (reds->lookahead_tokens)
+        {
+          int i;
+          for (i = 0; i < ntokens; i++)
+            if (bitset_test (reds->lookahead_tokens[j], i))
+              {
+                if (bitset_test (no_reduce_set, i))
+                  firstd = print_token (&dout, firstd, symbols[i]->tag);
+                else
+                  {
+                    if (! defaulted)
+                      firste = print_token (&eout, firste, symbols[i]->tag);
+                    bitset_set (no_reduce_set, i);
+                  }
+              }
+        }
+  \end{verbatim}
+
+  Les commentaires sont explicites. Tout d'abord, il y a les considérations
+  relevant du caractère \og action par défaut \fg: ces réductions ne doivent
+  pas être étiquetées par le moindre LAT (ce afin de facilement distinguer le
+  cas par défaut). Ce qui explique le \texttt{if (! defaulted)}: si la
+  réduction courante correspond à une réduction par défaut active, alors on ne
+  rajoute pas de potentiels autres LAT à cet arc.
+
+  Le \textit{bitset} \texttt{no\_reduce\_set} permet de (re-)déterminer
+  l'activation ou non d'une réduction. L'information n'est pas conservée
+  jusqu'à cet endroit du programme, car elle est tout à fait inutile pour le
+  fonctionnement de Bison. On ne souhaite pas que le programme dans son
+  intégralité soit impacté par ce genre de fonctionnalité.
+
+  Il serait intéressant d'étudier des possibilités pour ne pas dupliquer le
+  calcul de cette donnée dans les cas où on en a besoin plusieurs fois.
+
+  Le backend de l'affichage des réductions relève de la jongle entre
+  \textit{obstacks}. En effet, deux sont systématiquement construites: il faut
+  les différencier (pour ne pas que les arcs soient fusionnés), et les afficher
+  comme on le souhaite, mais ne pas afficher du tout les arcs dont l'obstack
+  est vide. Ici encore les commentaires sont relativement explicites:
+
+  \begin{verbatim}
+  /* If no lookahead tokens were valid transitions, this reduction is
+     actually hidden, so cancel everything. */
+  if (first)
+    (void) obstack_finish0 (out);
+  else
+    {
+      char const *ed = enabled ? "" : "d";
+      char const *color = enabled ? ruleno ? "3" : "1" : "5";
+
+      /* First, build the edge's head. The name of reduction nodes is "nRm",
+         with n the source state and m the rule number. This is because we
+         don't want all the reductions bearing a same rule number to point to
+         the same state, since that is not the desired format. */
+      fprintf (fout, "  %1$d -> \"%1$dR%2$d%3$s\" [",
+               source, ruleno, ed);
+
+      /* (The lookahead tokens have been added to the beginning of the
+         obstack, in the caller function.) */
+      if (! obstack_empty_p (out))
+        {
+          char *label = obstack_finish0 (out);
+          fprintf (fout, "label=\"[%s]\", ", label);
+          obstack_free (out, label);
+        }
+
+      /* Then, the edge's tail. */
+      fprintf (fout, "style=solid]\n");
+  \end{verbatim}
+
+  Les couleurs retenues pour les \og diamants \fg de notre représentation sont
+  bien assorties car sont issues d'un thème prédéfini de Graphviz\footnote{%
+  http://www.graphviz.org/doc/info/colors.html}.
+
+  \subsubsection{Adaptation à la production via XML}
+
+  Il a été pensé, vers 2006, qu'il serait intéressant d'introduire un format
+  de sortie plus riche que le simple texte: un schéma XML de l'automate. Bison
+  est fourni avec des feuilles de transformation XSLT (\textit{Extensible
+  Stylesheet Language Transformations}). Ce langage exploite toute la puissance
+  du XML, notamment sa nature propice au \textit{pattern matching}.
+
+  \begin{figure}[H]
+    \begin{center}
+      \includegraphics[scale=0.55]{images/xslt}
+      \caption{Fonctionnement de XSLT, tiré de Wikipedia, l'encyclopédie
+      libre.}
+    \end{center}
+  \end{figure}
+
+  Le fichier \texttt{xml2text.xsl} permet de générer une copie exacte de la
+  sortie textuelle à partir du simple \texttt{.xml}, le fichier
+  \texttt{xml2html.xsl} fait de même pour la sortie HTML, \ldots et le fichier
+  \texttt{xml2dot.xsl} de même pour la sortie Graphviz.
+
+  Il a donc fallu adapter ce fichier de transformations pour obtenir une copie
+  exact de nos nouveaux graphes: sinon, on perdait la compatibilité (et
+  l'équivalence) entre ces deux méthodes de production, et cela aurait été une
+  régression.
+
+  Recoder cette création de \textit{bitset} aurait été pénible en XSLT\@.
+  Heureusement, la richesse du fichier XML produit nous évita bien du mal. En
+  voici un extrait:
+
+  \begin{verbatim}
+    <state number="0">
+      (...)
+      <actions>
+        (...)
+        <reductions>
+          <reduction symbol="$end" rule="3" enabled="true"/>
+          <reduction symbol="$end" rule="4" enabled="false"/>
+          <reduction symbol="$default" rule="3" enabled="true"/>
+        </reductions>
+      </actions>
+      <solved-conflicts/>
+    </state>
+  \end{verbatim}
+
+  Le point qui doit retenir notre attention ici est la présence d'un attribut
+  \texttt{enabled}, qui nous facilite grandement la tâche. La procédure est
+  simple:
+
+  \begin{enumerate}
+    \item On traite une fois chaque règle pour laquelle on a un arc à générer,
+      c'est-à-dire deux fois si elle est présente une fois (ou plus) avec un
+      \texttt{enabled} vrai et une fois (ou plus) avec cet attribut faux.
+    \item Pour chaque couple (\textit{numéro de règle, activation}) ainsi
+      obtenu, on réitère sur l'ensemble des réductions de cet état, afin de
+      récupérer tous les attributs \texttt{symbol} pour lesquels on a ce
+      couple. On obtient ainsi la liste des LAT avec laquelle on va étiquetter
+      notre arc.
+  \end{enumerate}
+
+  Le code XSLT correspondant à ce premier filtrage:
+
+  \begin{verbatim}
+<xsl:for-each select='reduction'>
+    <!-- These variables are needed because the current context can't be
+         refered to directly in XPath expressions. -->
+    <xsl:variable name="rul">
+      <xsl:value-of select="@rule"/>
+    </xsl:variable>
+    <xsl:variable name="ena">
+      <xsl:value-of select="@enabled"/>
+    </xsl:variable>
+    <!-- The foreach's body is protected by this, so that we are actually
+         going to iterate once per reduction rule, and not per lookahead. -->
+    <xsl:if test='not(preceding-sibling::*[@rule=$rul and @enabled=$ena])'>
+  \end{verbatim}
+
+  Et au second:
+
+  \begin{verbatim}
+        <xsl:for-each select='../reduction[@enabled=$ena and @rule=$rule]'>
+  \end{verbatim}
+
+ On retrouve également notre gestion du cas particulier des actions par
+  défaut:
+  \begin{verbatim}
+      <!-- Don't show labels for the default action. In other cases, there will
+           always be at least one token, so 'label="[]"' will not occur. -->
+      <xsl:if test='$rule!=0 and not(../reduction[@enabled=$ena and @rule=$rule and @symbol="$default"])'>
+  \end{verbatim}
+
+  Globalement, on constate que la technologie XPath nous a bien rendu service,
+  même si pour le premier filtrage celle-ci s'est avérée trop limitée. On
+  aurait en fait eu besoin du \texttt{group-by} de XSLT 2.0, mais Bison utilise
+  encore 1.0, et il est vrai que quelques lignes supplémentaires ne justifient
+  pas la nécessité d'une version plus récente pour les utilisateurs.
+
+  \cleardoublepage
+
+  \subsection{Squelettes}
+
+  Les années 2000 ont vu le remplacement de l'ancien \texttt{bison.hairy} par
+  un backend à bases de squelettes articulés par des macros GNU M4. Cela permet
+  de très facilement mettre des alternatives selon qu'on directive a été
+  spécifiée ou non. Par exemple, la directive \texttt{\%define parse.assert}
+  cause l'émission d'un certain nombre d'assertions qui seraient sinon
+  absentes.
+
+  Cela se fait de la sorte (la macro \texttt{b4\_parse\_assert\_if} étant
+  définie en amont):
+
+  \begin{verbatim}
+    template <typename T>
+    T&
+    build ()
+    {]b4_parse_assert_if([
+      YYASSERT (!tname);
+      YYASSERT (sizeof (T) <= S);
+      tname = typeid (T).name ();])[
+      return *new (buffer.raw) T;
+    }
+  \end{verbatim}
+
+  \subsubsection{Introduction d'une nouvelle forme de pureté}
+
+  Un parseur réentrant est un programme qui n'altère pas le cours de son
+  exécution; autrement dit, il est consitué de code pur (sans effet de bord).
+  La réentrance est importante lorsque l'on procède à des exécutions
+  asynchrones; par exemple, un programme non-réentrant ne peut pas être invoqué
+  de façon sûr à partir d'un \textit{signal handler}. Sur des systèmes à fils
+  d'exécution multiple, un programme non-réentrant doit être protégé par des
+  verrous.
+
+  Normalement, les parseurs générés par Bison ne sont pas réentrants. Ceci est
+  généralement suffisant pour les usages courants, et garanti la compatibilité
+  arrière avec YACC (les interfaces standard de YACC étant non-réentrantes de
+  par leur usage de variables statiquement allouées pour la communication avec
+  l'analyseur lexical \texttt{yylex}, notamment \texttt{yylval} et
+  \texttt{yylloc}).
+
+  On peut également demander à Bison de générer un parseur pur, réentrant, avec
+  la directive \texttt{\%define api.pure}. Ceci a pour effet que
+  \texttt{yylval} et \texttt{yylloc} deviennent des variables locales à
+  \texttt{yyparse}, et qu'une convention d'appel différente est utilisée pour
+  \texttt{yylex}.
+
+  Ce qui nous intéresse tout particulièrement, c'est le cas des parseurs qui
+  traquent les \textit{locations}. L'interface de la fonction de gestion des
+  erreurs devenait différente selon le squelette utilisé:
+
+  \begin{verbatim}
+  void yyerror (char const *msg);                // Yacc parsers.
+  void yyerror (YYLTYPE *locp, char const *msg); // GLR parsers.
+  \end{verbatim}
+
+  On perdait la location sur les parseurs YACC\@. Or, ce comportement étaient
+  en fait souhaité, pour des raisons de compatibilité.
+
+  Nous avons donc introduit une troisième valeur possible pour la directive
+  \texttt{\%define api.pure}: en plus des valeurs Booléennes, elle peut
+  maintenant valoir \texttt{full}; le comportement est le même que pour
+  \texttt{true} à l'exception près que les parseurs YACC avec locations peuvent
+  maintenant avoir accès aux-dites locations dans leur gestion des erreurs,
+  sans avoir à passer par des hacks étranges, comme c'était le cas.
+
+  Voici un extrait des modifications apportées au M4:
+
+  \begin{verbatim}
+ b4_percent_define_default([[api.pure]], [[false]])
+-b4_define_flag_if([pure])
+-m4_define([b4_pure_flag],
+-          [b4_percent_define_flag_if([[api.pure]], [[1]], [[0]])])
+-
+-# b4_yacc_pure_if(IF-TRUE, IF-FALSE)
+-# ----------------------------------
+-# Expand IF-TRUE, if %pure-parser and %parse-param, IF-FALSE otherwise.
+-m4_define([b4_yacc_pure_if],
+-[b4_pure_if([m4_ifset([b4_parse_param],
+-                     [$1], [$2])],
+-           [$2])])
+-
++b4_percent_define_check_values([[[[api.pure]],
++                                 [[false]], [[true]], [[]], [[full]]]])
++
++m4_define([b4_pure_flag], [[0]])
++m4_case(b4_percent_define_get([[api.pure]]),
++        [false], [m4_define([b4_pure_flag], [[0]])],
++        [true],  [m4_define([b4_pure_flag], [[1]])],
++        [],      [m4_define([b4_pure_flag], [[1]])],
++        [full],  [m4_define([b4_pure_flag], [[2]])])
++
++m4_define([b4_pure_if],
++[m4_case(b4_pure_flag,
++         [0], [$2],
++         [1], [$1],
++         [2], [$1])])
++         [m4_fatal([invalid api.pure value: ]$1)])])
+  \end{verbatim}
+
+  On note le très élégant \texttt{b4\_define\_flag\_if([pure])}, qui est en fait
+  une macro définissant des macros; en l'occurence la macro
+  \texttt{b4\_percent\_define\_flag\_if}. Ces macros génériques vérifient la
+  présence d'une directive \texttt{\%define} selon des règles Booléennes. D'un
+  point de vue de généricité du code, c'était très bon. Ce que nous avons voulu
+  faire, c'est spécialiser cette macro pour qu'elle donne non plus deux mais
+  trois valeurs possibles, c'est ce qu'on voit dans la macro
+  \texttt{b4\_pure\_flag}. Enfin, la macro \texttt{b4\_pure\_if} est un wrapper
+  qui permet d'assurer la compatibilité arrière à moindre coût: à part pour le
+  cas très précis des arguements de la fonction \texttt{errror}, cette nouvelle
+  valeur n'a pas à être traitée différement d'un simple \texttt{true}.
+
+  On apprécie dès ce genre de modification des squelettes la souplesse (et la
+  généricité) apportée par GNU M4.
+
+  \subsubsection{Réécriture des symboles}
+
+  Voici à quoi ressemble l'affichage de debug de Bison:
+
+  \begin{verbatim}
+Starting parse
+Entering state 0
+Reading a token: Next token is token 'b' ()
+Reducing stack by rule 4 (line 15):
+-> $$ = nterm empty ()
+Stack now 0
+Entering state 4
+Reducing stack by rule 3 (line 13):
+   $1 = nterm empty ()
+-> $$ = nterm a ()
+Stack now 0
+Entering state 3
+Next token is token 'b' ()
+Shifting token 'b' ()
+Entering state 6
+Reducing stack by rule 1 (line 10):
+   $1 = nterm a ()
+   $2 = token 'b' ()
+-> $$ = nterm e ()
+Stack now 0
+Entering state 2
+Reading a token: Now at end of input.
+Shifting token $end ()
+Entering state 5
+Stack now 0 2 5
+Cleanup: popping token $end ()
+Cleanup: popping nterm e ()
+  \end{verbatim}
+
+  Il est question d'une pile. A chaque fois que l'on procède à un décalage de
+  token, on ajoute un symbole correspondant à ce token sur la pile. Ce symbol
+  contient plusieurs informations: la \textit{location} du symbole dans
+  l'entrée utilisateur, et le type de token dont il s'agit, utilisé pour
+  faire correspondre le haut de la pile à une règle existant de la grammaire,
+  et procéder à une réduction. Lors d'une réduction, les symboles réduits dont
+  dépilés, et on empile à la place un nouveau symbole, résultat de l'action que
+  l'utilisateur a précisé pour cette règle.
+
+  Cette pile était implémentée dans le squelette lalr1.cc avec une
+  \texttt{std::deque} (\textit{double-ended queue}, liste doublement chaînée).
+  Un choix plus logique (et plus cohérent avec les autres implémentation) étant
+  un \texttt{std::vector}, nous avons voulu changer de conteneur.
+
+  Les éléments dans un vecteur sont déplacés à chaque fois que le vecteur doit
+  être dynamiquement redimensionné. Il y a alors une copie, faite par le
+  constructeur par copie de notre objet \texttt{symbole}. Malheureusement, la
+  construction ne pouvait se faire en un seul temps.
+
+  Effectivement, les symboles ont une valeur sémantique, qui s'avère être typée
+  selon les souhaits de l'utilisateur. On a vu que les directives Bison
+  associaient les types aux tokens (et aux règles, c'est à dire aux états): il
+  est donc nécessaire de savoir de quel token on est le symbole pour savoir
+  quel type a notre valeur sémantique. Or, cette information est indispensable
+  à la bonne construction de la valeur sémantique contenue dans le symbole, car
+  implémentée avec (selon les cas) une union ou un variant.
+
+  L'implémentation des symboles qui existait alors était un CRTP
+  (\textit{curriously recurring template pattern}), à savoir, dans les grandes
+  lignes:
+
+  \begin{verbatim}
+  template <typename Exact>
+  struct symbol_base_type
+  {};
+
+  struct symbol_type : symbol_base_type<symbol_type>
+  { /* Many things here*/ };
+
+  struct stack_symbol_type : symbol_base_type<stack_symbol_type>
+  { /* Many things here*/ };
+  \end{verbatim}
+
+  \begin{figure}[H]
+    \begin{center}
+      \includegraphics[scale=1]{images/crtp}
+      \caption{Le design pattern CRTP.}
+    \end{center}
+  \end{figure}
+
+  Qui a été remplacé par:
+
+  \begin{verbatim}
+  template <typename Base>
+  basic_symbol : Base
+  {};
+
+  typedef basic_symbol<by_type> symbol_type;
+  typedef basic_symbol<by_state> stack_symbol_type;
+  \end{verbatim}
+
+  Pourquoi?
+
+  Il y a deux types de symboles:
+  \begin{itemize}
+    \item les symboles \textit{externes}, \texttt{symbol\_type}: ils ont un
+      type, une valeur et une location, et sont retournés par \texttt{yylex}.
+    \item les symbols \textit{internes}, \texttt{stack\_symbol\_type}, groupent
+      un numéro d'état, une valeur et une location, et sont stockés dans la
+      pile du parseur. Le type du symbole est calculé à partir de l'état.
+  \end{itemize}
+
+
+  Le template de classe \texttt{symbol\_base\_type<Exact>} factorise le code
+  commun à \texttt{stack\_symbol\_type} and \texttt{symbol\_type}.  Il utilise
+  un CRTP afin de toujours pouvoir \textit{downcast} vers le type exact.
+  \texttt{symbol\_base\_type} implémente la valeur et la location, et délègue
+  la gestion du typage à son paramètre.
+
+  En tenant de généraliser le support de \texttt{variant}, on a heurté un mur:
+  comme \texttt{stack\_symbol\_type} et \texttt{symbol\_type} héritent tout
+  deux de \texttt{symbol\_base\_type}, le type/état est définit
+  \underline{après} la valeur et la location. En C++, l'ordre de définition des
+  membres définit l'ordre dans lequel ils sont initialisés, et les choses vont
+  du coup à reculons: la valeur est initialisée \underline{avant} le type. Ceci
+  est impossible, le type est nécessaire à l'initialisation de la valeur.
+
+  Ainsi, il nous a fallu trouver un nouveau moyen de factoriser le code commun,
+  un qui garantie le bon ordre des membres.
+
+  L'idée est simple, on définit deux classes (mères) qui implémentent le type
+  du type (\texttt{by\_type}\footnote{ces noms furent choisis par similitude à
+  basic\_string et basic\_ostream} le code directement par type,
+  \texttt{by\_state} en revanche le fait par numéro d'état). On définit alors
+  \texttt{basic\_symbol<Base>} le template de classe qui donne la valeur et la
+  location, et on le fait dériver d'un paramètre, \texttt{by\_type} ou
+  \texttt{by\_state}.
+
+  \cleardoublepage
+
   \section{Conclusion}
 
   \cleardoublepage
